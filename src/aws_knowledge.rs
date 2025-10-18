@@ -14,49 +14,70 @@ impl AWSKnowledgeBase {
         let mut common_patterns = HashMap::new();
 
         // AWS Service Patterns
-        service_patterns.insert("s3".to_string(), vec![
-            "aws s3 cp".to_string(),
-            "boto3.client('s3')".to_string(),
-            "S3Client".to_string(),
-            "PutObjectRequest".to_string(),
-        ]);
+        service_patterns.insert(
+            "s3".to_string(),
+            vec![
+                "aws s3 cp".to_string(),
+                "boto3.client('s3')".to_string(),
+                "S3Client".to_string(),
+                "PutObjectRequest".to_string(),
+            ],
+        );
 
-        service_patterns.insert("lambda".to_string(), vec![
-            "lambda_handler".to_string(),
-            "event".to_string(),
-            "context".to_string(),
-            "boto3.client('lambda')".to_string(),
-        ]);
+        service_patterns.insert(
+            "lambda".to_string(),
+            vec![
+                "lambda_handler".to_string(),
+                "event".to_string(),
+                "context".to_string(),
+                "boto3.client('lambda')".to_string(),
+            ],
+        );
 
-        service_patterns.insert("dynamodb".to_string(), vec![
-            "boto3.resource('dynamodb')".to_string(),
-            "Table".to_string(),
-            "put_item".to_string(),
-            "query".to_string(),
-        ]);
+        service_patterns.insert(
+            "dynamodb".to_string(),
+            vec![
+                "boto3.resource('dynamodb')".to_string(),
+                "Table".to_string(),
+                "put_item".to_string(),
+                "query".to_string(),
+            ],
+        );
 
         // Best Practices
-        best_practices.insert("s3".to_string(), vec![
-            "Use server-side encryption".to_string(),
-            "Enable versioning for critical data".to_string(),
-            "Implement lifecycle policies".to_string(),
-            "Use IAM policies for access control".to_string(),
-        ]);
+        best_practices.insert(
+            "s3".to_string(),
+            vec![
+                "Use server-side encryption".to_string(),
+                "Enable versioning for critical data".to_string(),
+                "Implement lifecycle policies".to_string(),
+                "Use IAM policies for access control".to_string(),
+            ],
+        );
 
-        best_practices.insert("lambda".to_string(), vec![
-            "Keep functions stateless".to_string(),
-            "Use environment variables for configuration".to_string(),
-            "Implement proper error handling".to_string(),
-            "Optimize memory allocation".to_string(),
-        ]);
+        best_practices.insert(
+            "lambda".to_string(),
+            vec![
+                "Keep functions stateless".to_string(),
+                "Use environment variables for configuration".to_string(),
+                "Implement proper error handling".to_string(),
+                "Optimize memory allocation".to_string(),
+            ],
+        );
 
         // Common Patterns
-        common_patterns.insert("s3_upload".to_string(), 
-            "s3_client.put_object(Bucket='bucket-name', Key='key', Body=data)".to_string());
-        common_patterns.insert("lambda_response".to_string(),
-            "{'statusCode': 200, 'body': json.dumps('Hello World')}".to_string());
-        common_patterns.insert("dynamodb_query".to_string(),
-            "table.query(KeyConditionExpression=Key('pk').eq('value'))".to_string());
+        common_patterns.insert(
+            "s3_upload".to_string(),
+            "s3_client.put_object(Bucket='bucket-name', Key='key', Body=data)".to_string(),
+        );
+        common_patterns.insert(
+            "lambda_response".to_string(),
+            "{'statusCode': 200, 'body': json.dumps('Hello World')}".to_string(),
+        );
+        common_patterns.insert(
+            "dynamodb_query".to_string(),
+            "table.query(KeyConditionExpression=Key('pk').eq('value'))".to_string(),
+        );
 
         Self {
             service_patterns,
@@ -73,7 +94,11 @@ impl AWSKnowledgeBase {
             for pattern in patterns {
                 if code.contains(pattern) {
                     if let Some(practices) = self.best_practices.get(service) {
-                        suggestions.extend(practices.iter().map(|p| format!("💡 {}: {}", service.to_uppercase(), p)));
+                        suggestions.extend(
+                            practices
+                                .iter()
+                                .map(|p| format!("💡 {}: {}", service.to_uppercase(), p)),
+                        );
                     }
                 }
             }
@@ -93,7 +118,8 @@ impl AWSKnowledgeBase {
 
     pub fn get_cloudformation_template(&self, service: &str) -> Option<String> {
         match service {
-            "s3" => Some(r#"
+            "s3" => Some(
+                r#"
 Resources:
   MyS3Bucket:
     Type: AWS::S3::Bucket
@@ -105,8 +131,11 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-"#.to_string()),
-            "lambda" => Some(r#"
+"#
+                .to_string(),
+            ),
+            "lambda" => Some(
+                r#"
 Resources:
   MyLambdaFunction:
     Type: AWS::Lambda::Function
@@ -119,14 +148,16 @@ Resources:
           def lambda_handler(event, context):
               return {'statusCode': 200, 'body': 'Hello World'}
       Role: !GetAtt LambdaExecutionRole.Arn
-"#.to_string()),
+"#
+                .to_string(),
+            ),
             _ => None,
         }
     }
 
     pub fn enhance_with_aws_context(&self, explanation: &str, code: &str) -> String {
         let aws_suggestions = self.get_aws_suggestions(code);
-        
+
         if aws_suggestions.is_empty() {
             explanation.to_string()
         } else {

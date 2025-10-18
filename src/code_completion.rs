@@ -10,16 +10,20 @@ impl CodeCompletion {
         Self { context_lines: 10 }
     }
 
-    pub async fn suggest_completion(&self, file_path: &str, cursor_line: usize) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn suggest_completion(
+        &self,
+        file_path: &str,
+        cursor_line: usize,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(file_path)?;
         let lines: Vec<&str> = content.lines().collect();
-        
+
         let start = cursor_line.saturating_sub(self.context_lines);
         let end = (cursor_line + self.context_lines).min(lines.len());
         let context = lines[start..end].join("\n");
-        
+
         let language = self.detect_language(file_path);
-        
+
         let prompt = format!(
             "Complete this {} code. Provide only the next logical line(s):\n\n{}\n\nCursor at line {}. Complete:",
             language, context, cursor_line + 1
@@ -45,7 +49,11 @@ impl CodeCompletion {
         }
     }
 
-    async fn generate_completion(&self, _prompt: &str, language: &str) -> Result<String, Box<dyn std::error::Error>> {
+    async fn generate_completion(
+        &self,
+        _prompt: &str,
+        language: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Mock completion based on language patterns
         let completion = match language {
             "Rust" => "    Ok(result)",
@@ -54,14 +62,17 @@ impl CodeCompletion {
             "Java" => "        return result;",
             _ => "// TODO: Complete implementation",
         };
-        
+
         Ok(completion.to_string())
     }
 
-    pub async fn suggest_imports(&self, file_path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    pub async fn suggest_imports(
+        &self,
+        file_path: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(file_path)?;
         let mut suggestions = Vec::new();
-        
+
         // Analyze code for missing imports
         if content.contains("HashMap") && !content.contains("use std::collections::HashMap") {
             suggestions.push("use std::collections::HashMap;".to_string());
@@ -69,7 +80,7 @@ impl CodeCompletion {
         if content.contains("Vec") && !content.contains("use std::vec::Vec") {
             suggestions.push("// Vec is in prelude".to_string());
         }
-        
+
         Ok(suggestions)
     }
 }

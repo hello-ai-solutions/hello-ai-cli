@@ -24,7 +24,11 @@ pub async fn scan_cloud_pii(
         "azure" => scan_azure_text_analytics_pii(cloud_config, text).await,
         "gcp" => scan_gcp_dlp_pii(cloud_config, text).await,
         "oracle" => scan_oracle_data_safe_pii(cloud_config, text).await,
-        _ => Err(format!("Unsupported cloud provider for PII: {}", cloud_config.provider).into()),
+        _ => Err(format!(
+            "Unsupported cloud provider for PII: {}",
+            cloud_config.provider
+        )
+        .into()),
     }
 }
 
@@ -52,9 +56,11 @@ async fn get_azure_openai_response(
     }
 
     let client = reqwest::Client::new();
-    let url = format!("{}/openai/deployments/{}/chat/completions?api-version=2024-02-15-preview", 
-                     config.azure_openai_endpoint, config.azure_openai_model);
-    
+    let url = format!(
+        "{}/openai/deployments/{}/chat/completions?api-version=2024-02-15-preview",
+        config.azure_openai_endpoint, config.azure_openai_model
+    );
+
     let payload = json!({
         "messages": [
             {
@@ -76,7 +82,7 @@ async fn get_azure_openai_response(
 
     let response_text = response.text().await?;
     let json: Value = serde_json::from_str(&response_text)?;
-    
+
     if let Some(choices) = json["choices"].as_array() {
         if let Some(first_choice) = choices.first() {
             if let Some(content) = first_choice["message"]["content"].as_str() {
@@ -99,7 +105,10 @@ async fn get_gcp_vertex_response(
     };
 
     if project_id.is_empty() {
-        return Err("GCP Project ID required. Set GCP_PROJECT_ID env var or configure in config.toml".into());
+        return Err(
+            "GCP Project ID required. Set GCP_PROJECT_ID env var or configure in config.toml"
+                .into(),
+        );
     }
 
     // Placeholder for GCP Vertex AI implementation
@@ -146,8 +155,11 @@ async fn scan_azure_text_analytics_pii(
     }
 
     let client = reqwest::Client::new();
-    let url = format!("{}/text/analytics/v3.1/entities/recognition/pii", config.azure_text_analytics_endpoint);
-    
+    let url = format!(
+        "{}/text/analytics/v3.1/entities/recognition/pii",
+        config.azure_text_analytics_endpoint
+    );
+
     let payload = json!({
         "documents": [
             {
@@ -168,7 +180,7 @@ async fn scan_azure_text_analytics_pii(
 
     let response_text = response.text().await?;
     let json: Value = serde_json::from_str(&response_text)?;
-    
+
     if let Some(documents) = json["documents"].as_array() {
         if let Some(first_doc) = documents.first() {
             if let Some(entities) = first_doc["entities"].as_array() {

@@ -10,7 +10,9 @@ pub struct UseAzure {
 
 impl UseAzure {
     pub async fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(format!("Azure CLI not implemented yet. Would execute: az {} {}", 
-                  self.service_name, self.operation_name))
+        Ok(format!(
+            "Azure CLI not implemented yet. Would execute: az {} {}",
+            self.service_name, self.operation_name
+        ))
     }
 }

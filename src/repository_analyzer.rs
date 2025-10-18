@@ -63,9 +63,11 @@ impl RepositoryAnalyzer {
         }
     }
 
-    pub async fn analyze_repository(&mut self) -> Result<RepositoryAnalysis, Box<dyn std::error::Error>> {
+    pub async fn analyze_repository(
+        &mut self,
+    ) -> Result<RepositoryAnalysis, Box<dyn std::error::Error>> {
         self.scan_files().await?;
-        
+
         let project_type = self.detect_project_type();
         let languages = self.get_languages();
         let dependencies = self.analyze_dependencies().await?;
@@ -95,7 +97,7 @@ impl RepositoryAnalyzer {
             for entry in entries {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if path.is_dir() {
                     let dir_name = path.file_name().unwrap().to_str().unwrap();
                     if !["target", "node_modules", ".git", "build", "dist"].contains(&dir_name) {
@@ -103,7 +105,8 @@ impl RepositoryAnalyzer {
                     }
                 } else if self.is_source_file(&path) {
                     if let Ok(file_info) = self.analyze_file(&path).await {
-                        self.file_map.insert(path.to_string_lossy().to_string(), file_info);
+                        self.file_map
+                            .insert(path.to_string_lossy().to_string(), file_info);
                     }
                 }
             }
@@ -113,7 +116,10 @@ impl RepositoryAnalyzer {
 
     fn is_source_file(&self, path: &Path) -> bool {
         if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            matches!(ext, "rs" | "py" | "js" | "ts" | "java" | "go" | "cpp" | "c" | "h")
+            matches!(
+                ext,
+                "rs" | "py" | "js" | "ts" | "java" | "go" | "cpp" | "c" | "h"
+            )
         } else {
             false
         }
@@ -151,7 +157,7 @@ impl RepositoryAnalyzer {
 
     fn extract_imports(&self, content: &str, language: &str) -> Vec<String> {
         let mut imports = Vec::new();
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
             match language {
@@ -159,27 +165,27 @@ impl RepositoryAnalyzer {
                     if trimmed.starts_with("use ") {
                         imports.push(trimmed.to_string());
                     }
-                },
+                }
                 "python" => {
                     if trimmed.starts_with("import ") || trimmed.starts_with("from ") {
                         imports.push(trimmed.to_string());
                     }
-                },
+                }
                 "javascript" | "typescript" => {
                     if trimmed.starts_with("import ") || trimmed.contains("require(") {
                         imports.push(trimmed.to_string());
                     }
-                },
+                }
                 _ => {}
             }
         }
-        
+
         imports
     }
 
     fn extract_exports(&self, content: &str, language: &str) -> Vec<String> {
         let mut exports = Vec::new();
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
             match language {
@@ -187,22 +193,22 @@ impl RepositoryAnalyzer {
                     if trimmed.starts_with("pub fn ") || trimmed.starts_with("pub struct ") {
                         exports.push(trimmed.to_string());
                     }
-                },
+                }
                 "javascript" | "typescript" => {
                     if trimmed.starts_with("export ") {
                         exports.push(trimmed.to_string());
                     }
-                },
+                }
                 _ => {}
             }
         }
-        
+
         exports
     }
 
     fn extract_functions(&self, content: &str, language: &str) -> Vec<String> {
         let mut functions = Vec::new();
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
             match language {
@@ -212,18 +218,18 @@ impl RepositoryAnalyzer {
                             functions.push(name);
                         }
                     }
-                },
+                }
                 "python" => {
                     if trimmed.starts_with("def ") {
                         if let Some(name) = self.extract_function_name(trimmed, "def ") {
                             functions.push(name);
                         }
                     }
-                },
+                }
                 _ => {}
             }
         }
-        
+
         functions
     }
 
@@ -245,7 +251,9 @@ impl RepositoryAnalyzer {
             "Rust Project".to_string()
         } else if self.root_path.join("package.json").exists() {
             "Node.js Project".to_string()
-        } else if self.root_path.join("requirements.txt").exists() || self.root_path.join("setup.py").exists() {
+        } else if self.root_path.join("requirements.txt").exists()
+            || self.root_path.join("setup.py").exists()
+        {
             "Python Project".to_string()
         } else if self.root_path.join("pom.xml").exists() {
             "Java Maven Project".to_string()
@@ -266,21 +274,22 @@ impl RepositoryAnalyzer {
 
     async fn analyze_dependencies(&self) -> Result<Vec<Dependency>, Box<dyn std::error::Error>> {
         let mut dependencies = Vec::new();
-        
+
         // Analyze internal dependencies
         let mut internal_deps: HashMap<String, Vec<String>> = HashMap::new();
-        
+
         for (file_path, file_info) in &self.file_map {
             for import in &file_info.imports {
                 // Check if import refers to internal module
                 if self.is_internal_import(import) {
-                    internal_deps.entry(import.clone())
+                    internal_deps
+                        .entry(import.clone())
                         .or_insert_with(Vec::new)
                         .push(file_path.clone());
                 }
             }
         }
-        
+
         for (dep_name, used_by) in internal_deps {
             dependencies.push(Dependency {
                 name: dep_name,
@@ -289,10 +298,10 @@ impl RepositoryAnalyzer {
                 used_by,
             });
         }
-        
+
         // Analyze external dependencies from config files
         dependencies.extend(self.analyze_external_dependencies().await?);
-        
+
         Ok(dependencies)
     }
 
@@ -301,26 +310,28 @@ impl RepositoryAnalyzer {
         import.contains("./") || import.contains("../") || import.starts_with("crate::")
     }
 
-    async fn analyze_external_dependencies(&self) -> Result<Vec<Dependency>, Box<dyn std::error::Error>> {
+    async fn analyze_external_dependencies(
+        &self,
+    ) -> Result<Vec<Dependency>, Box<dyn std::error::Error>> {
         let mut dependencies = Vec::new();
-        
+
         // Rust dependencies
         if let Ok(cargo_toml) = fs::read_to_string(self.root_path.join("Cargo.toml")) {
             dependencies.extend(self.parse_cargo_dependencies(&cargo_toml));
         }
-        
+
         // Node.js dependencies
         if let Ok(package_json) = fs::read_to_string(self.root_path.join("package.json")) {
             dependencies.extend(self.parse_npm_dependencies(&package_json));
         }
-        
+
         Ok(dependencies)
     }
 
     fn parse_cargo_dependencies(&self, content: &str) -> Vec<Dependency> {
         let mut dependencies = Vec::new();
         let mut in_dependencies = false;
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed == "[dependencies]" {
@@ -330,7 +341,7 @@ impl RepositoryAnalyzer {
             if trimmed.starts_with('[') && trimmed != "[dependencies]" {
                 in_dependencies = false;
             }
-            
+
             if in_dependencies && trimmed.contains('=') {
                 if let Some(eq_pos) = trimmed.find('=') {
                     let name = trimmed[..eq_pos].trim().to_string();
@@ -344,14 +355,14 @@ impl RepositoryAnalyzer {
                 }
             }
         }
-        
+
         dependencies
     }
 
     fn parse_npm_dependencies(&self, content: &str) -> Vec<Dependency> {
         // Simple JSON parsing for dependencies
         let mut dependencies = Vec::new();
-        
+
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             if let Some(deps) = json.get("dependencies").and_then(|d| d.as_object()) {
                 for (name, version) in deps {
@@ -364,7 +375,7 @@ impl RepositoryAnalyzer {
                 }
             }
         }
-        
+
         dependencies
     }
 
@@ -384,7 +395,7 @@ impl RepositoryAnalyzer {
 
     fn detect_patterns(&self) -> Vec<String> {
         let mut patterns = Vec::new();
-        
+
         // Check for common patterns
         if self.has_mvc_structure() {
             patterns.push("MVC (Model-View-Controller)".to_string());
@@ -395,7 +406,7 @@ impl RepositoryAnalyzer {
         if self.has_layered_structure() {
             patterns.push("Layered Architecture".to_string());
         }
-        
+
         patterns
     }
 
@@ -407,48 +418,48 @@ impl RepositoryAnalyzer {
     }
 
     fn has_microservice_structure(&self) -> bool {
-        self.file_map.keys().any(|path| path.contains("service")) && 
-        self.file_map.len() > 10
+        self.file_map.keys().any(|path| path.contains("service")) && self.file_map.len() > 10
     }
 
     fn has_layered_structure(&self) -> bool {
         let layers = ["src", "lib", "api", "core", "domain"];
-        layers.iter().any(|layer| {
-            self.file_map.keys().any(|path| path.contains(layer))
-        })
+        layers
+            .iter()
+            .any(|layer| self.file_map.keys().any(|path| path.contains(layer)))
     }
 
     fn detect_layers(&self) -> Vec<String> {
         let mut layers = Vec::new();
-        
+
         let common_layers = [
             ("presentation", vec!["ui", "view", "controller"]),
             ("business", vec!["service", "domain", "core"]),
             ("data", vec!["repository", "dao", "model"]),
             ("infrastructure", vec!["config", "util", "helper"]),
         ];
-        
+
         for (layer_name, keywords) in common_layers {
-            if keywords.iter().any(|keyword| {
-                self.file_map.keys().any(|path| path.contains(keyword))
-            }) {
+            if keywords
+                .iter()
+                .any(|keyword| self.file_map.keys().any(|path| path.contains(keyword)))
+            {
                 layers.push(layer_name.to_string());
             }
         }
-        
+
         layers
     }
 
     fn calculate_coupling(&self) -> String {
         let total_files = self.file_map.len();
         let total_imports: usize = self.file_map.values().map(|f| f.imports.len()).sum();
-        
+
         if total_files == 0 {
             return "unknown".to_string();
         }
-        
+
         let avg_imports = total_imports as f64 / total_files as f64;
-        
+
         if avg_imports < 3.0 {
             "low".to_string()
         } else if avg_imports < 8.0 {
@@ -460,7 +471,7 @@ impl RepositoryAnalyzer {
 
     fn calculate_complexity(&self) -> String {
         let total_lines: usize = self.file_map.values().map(|f| f.lines).sum();
-        
+
         if total_lines < 1000 {
             "low".to_string()
         } else if total_lines < 10000 {
@@ -472,7 +483,7 @@ impl RepositoryAnalyzer {
 
     fn find_project_issues(&self) -> Vec<ProjectIssue> {
         let mut issues = Vec::new();
-        
+
         // Large files
         for (path, file_info) in &self.file_map {
             if file_info.lines > 500 {
@@ -485,7 +496,7 @@ impl RepositoryAnalyzer {
                 });
             }
         }
-        
+
         // Circular dependencies (simplified check)
         if self.has_potential_circular_deps() {
             issues.push(ProjectIssue {
@@ -496,7 +507,7 @@ impl RepositoryAnalyzer {
                 suggestion: "Review import structure and refactor to remove cycles".to_string(),
             });
         }
-        
+
         issues
     }
 
@@ -505,25 +516,35 @@ impl RepositoryAnalyzer {
         self.calculate_coupling() == "high"
     }
 
-    fn generate_recommendations(&self, issues: &[ProjectIssue], architecture: &ArchitectureAnalysis) -> Vec<String> {
+    fn generate_recommendations(
+        &self,
+        issues: &[ProjectIssue],
+        architecture: &ArchitectureAnalysis,
+    ) -> Vec<String> {
         let mut recommendations = Vec::new();
-        
+
         if architecture.complexity == "high" {
-            recommendations.push("Consider refactoring complex modules into smaller components".to_string());
+            recommendations
+                .push("Consider refactoring complex modules into smaller components".to_string());
         }
-        
+
         if architecture.coupling == "high" {
-            recommendations.push("Reduce coupling by introducing interfaces and dependency injection".to_string());
+            recommendations.push(
+                "Reduce coupling by introducing interfaces and dependency injection".to_string(),
+            );
         }
-        
+
         if issues.iter().any(|i| i.issue_type == "Large File") {
-            recommendations.push("Break large files into focused, single-responsibility modules".to_string());
+            recommendations
+                .push("Break large files into focused, single-responsibility modules".to_string());
         }
-        
+
         if self.file_map.values().any(|f| f.functions.len() > 20) {
-            recommendations.push("Consider splitting files with many functions into separate modules".to_string());
+            recommendations.push(
+                "Consider splitting files with many functions into separate modules".to_string(),
+            );
         }
-        
+
         recommendations
     }
 
@@ -554,17 +575,36 @@ impl RepositoryAnalyzer {
             analysis.architecture.coupling,
             analysis.architecture.complexity,
             analysis.dependencies.len(),
-            analysis.dependencies.iter().filter(|d| d.dep_type == "external").count(),
-            analysis.dependencies.iter().filter(|d| d.dep_type == "internal").count(),
+            analysis
+                .dependencies
+                .iter()
+                .filter(|d| d.dep_type == "external")
+                .count(),
+            analysis
+                .dependencies
+                .iter()
+                .filter(|d| d.dep_type == "internal")
+                .count(),
             if analysis.issues.is_empty() {
                 "- No major issues detected".to_string()
             } else {
-                analysis.issues.iter()
-                    .map(|i| format!("- **{}**: {} ({})", i.severity.to_uppercase(), i.description, i.suggestion))
+                analysis
+                    .issues
+                    .iter()
+                    .map(|i| {
+                        format!(
+                            "- **{}**: {} ({})",
+                            i.severity.to_uppercase(),
+                            i.description,
+                            i.suggestion
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join("\n")
             },
-            analysis.recommendations.iter()
+            analysis
+                .recommendations
+                .iter()
                 .map(|r| format!("- {}", r))
                 .collect::<Vec<_>>()
                 .join("\n")

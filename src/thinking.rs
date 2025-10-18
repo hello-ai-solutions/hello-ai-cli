@@ -13,7 +13,7 @@ impl Thinking {
         // The analysis is still performed for internal decision making
         Ok(String::new())
     }
-    
+
     #[allow(dead_code)]
     pub fn new_step(step: i32, thought: &str, reasoning: Option<&str>) -> Self {
         Self {
@@ -22,7 +22,7 @@ impl Thinking {
             reasoning: reasoning.map(|s| s.to_string()),
         }
     }
-    
+
     pub fn new_thought(query: &str) -> Self {
         // Check if this is about file content that was already provided
         if query.contains("File:") && query.contains("# Amazon Q Developer CLI") {
@@ -45,10 +45,10 @@ impl Thinking {
 
         let system_aware_response = format!(
             "🤔 Analyzing request: {}",
-            if clean_query.len() > 200 { 
-                format!("{}...", &clean_query[..200]) 
-            } else { 
-                clean_query 
+            if clean_query.len() > 200 {
+                format!("{}...", &clean_query[..200])
+            } else {
+                clean_query
             }
         );
 

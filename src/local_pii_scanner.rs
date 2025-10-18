@@ -26,9 +26,12 @@ impl LocalPiiScanner {
         LocalPiiScanner { endpoint, model }
     }
 
-    pub async fn scan_text(&self, text: &str) -> Result<LocalPiiResult, Box<dyn std::error::Error>> {
+    pub async fn scan_text(
+        &self,
+        text: &str,
+    ) -> Result<LocalPiiResult, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
-        
+
         let prompt = format!(
             "You are a PII detection system. Analyze the text for Personally Identifiable Information.
 
@@ -69,12 +72,14 @@ Text to analyze: \"{}\"",
 
         let response_text = response.text().await?;
         let ollama_response: serde_json::Value = serde_json::from_str(&response_text)?;
-        
+
         if let Some(response_content) = ollama_response["response"].as_str() {
             // Try to parse JSON response from LLM
             if let Ok(pii_analysis) = serde_json::from_str::<serde_json::Value>(response_content) {
                 let has_pii = pii_analysis["has_pii"].as_bool().unwrap_or(false);
-                let entities = pii_analysis["entities"].as_array().unwrap_or(&vec![])
+                let entities = pii_analysis["entities"]
+                    .as_array()
+                    .unwrap_or(&vec![])
                     .iter()
                     .filter_map(|entity| {
                         Some(LocalPiiEntity {
@@ -111,15 +116,18 @@ Text to analyze: \"{}\"",
     fn sanitize_text_simple(&self, text: &str) -> String {
         // Simple sanitization - replace common PII patterns
         let mut sanitized = text.to_string();
-        
+
         // Email pattern
-        let email_regex = regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
+        let email_regex =
+            regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
         sanitized = email_regex.replace_all(&sanitized, "[EMAIL]").to_string();
-        
+
         // Phone pattern
-        let phone_regex = regex::Regex::new(r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b").unwrap();
+        let phone_regex =
+            regex::Regex::new(r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b")
+                .unwrap();
         sanitized = phone_regex.replace_all(&sanitized, "[PHONE]").to_string();
-        
+
         sanitized
     }
 }

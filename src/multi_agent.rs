@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
 struct AgentMessage {
@@ -26,14 +26,15 @@ struct Agent {
 impl MultiAgentSystem {
     pub fn new() -> Self {
         let mut agents = HashMap::new();
-        
+
         // Load agent configuration from file or use defaults
-        let agent_configs = Self::load_agent_config().unwrap_or_else(|_| Self::default_agent_config());
-        
+        let agent_configs =
+            Self::load_agent_config().unwrap_or_else(|_| Self::default_agent_config());
+
         for config in agent_configs {
             agents.insert(config.name.clone(), config);
         }
-        
+
         Self { agents }
     }
 
@@ -102,11 +103,11 @@ impl MultiAgentSystem {
             .ok_or("Could not find home directory")?
             .join(".hai")
             .join("agent-config.json");
-        
+
         if !config_path.exists() {
             return Err("Agent config file not found".into());
         }
-        
+
         let config_content = std::fs::read_to_string(config_path)?;
         let agents: Vec<Agent> = serde_json::from_str(&config_content)?;
         Ok(agents)
@@ -117,19 +118,24 @@ impl MultiAgentSystem {
             .ok_or("Could not find home directory")?
             .join(".hai")
             .join("agent-config.json");
-        
+
         // Ensure directory exists
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         let agents: Vec<&Agent> = self.agents.values().collect();
         let config_content = serde_json::to_string_pretty(&agents)?;
         std::fs::write(config_path, config_content)?;
         Ok(())
     }
 
-    pub fn configure_agent(&mut self, agent_name: &str, model_provider: &str, model_name: &str) -> Result<(), String> {
+    pub fn configure_agent(
+        &mut self,
+        agent_name: &str,
+        model_provider: &str,
+        model_name: &str,
+    ) -> Result<(), String> {
         if let Some(agent) = self.agents.get_mut(agent_name) {
             agent.model_provider = model_provider.to_string();
             agent.model_name = model_name.to_string();
@@ -140,8 +146,15 @@ impl MultiAgentSystem {
     }
 
     pub fn list_agent_configs(&self) -> Vec<(String, String, String)> {
-        self.agents.values()
-            .map(|agent| (agent.name.clone(), agent.model_provider.clone(), agent.model_name.clone()))
+        self.agents
+            .values()
+            .map(|agent| {
+                (
+                    agent.name.clone(),
+                    agent.model_provider.clone(),
+                    agent.model_name.clone(),
+                )
+            })
             .collect()
     }
 
@@ -153,85 +166,109 @@ impl MultiAgentSystem {
         let (tx, mut rx) = mpsc::channel::<AgentMessage>(100);
         let actions = self.analyze_request(request).await;
         let mut results = Vec::new();
-        
+
         // Real-time collaboration
         tokio::spawn(async move {
             while let Some(message) = rx.recv().await {
-                println!("🤖 Agent Communication: {} -> {}: {}", 
-                    message.from, message.to, message.content);
+                println!(
+                    "🤖 Agent Communication: {} -> {}: {}",
+                    message.from, message.to, message.content
+                );
             }
         });
-        
+
         // Execute coordinated actions with agent collaboration
         for action in actions {
             let result = match action.as_str() {
                 "create_deployment_yaml" => {
-                    self.collaborate_agents(vec!["deployment", "security", "validation"], request, &tx).await
-                },
+                    self.collaborate_agents(
+                        vec!["deployment", "security", "validation"],
+                        request,
+                        &tx,
+                    )
+                    .await
+                }
                 "troubleshoot_issue" => {
-                    self.collaborate_agents(vec!["troubleshoot", "security"], request, &tx).await
-                },
+                    self.collaborate_agents(vec!["troubleshoot", "security"], request, &tx)
+                        .await
+                }
                 "security_analysis" => {
-                    self.collaborate_agents(vec!["security", "validation"], request, &tx).await
-                },
-                _ => format!("🤖 Executing: {}", action)
+                    self.collaborate_agents(vec!["security", "validation"], request, &tx)
+                        .await
+                }
+                _ => format!("🤖 Executing: {}", action),
             };
             results.push(result);
         }
-        
+
         results
     }
 
-    async fn collaborate_agents(&mut self, agent_names: Vec<&str>, _request: &str, tx: &mpsc::Sender<AgentMessage>) -> String {
+    async fn collaborate_agents(
+        &mut self,
+        agent_names: Vec<&str>,
+        _request: &str,
+        tx: &mpsc::Sender<AgentMessage>,
+    ) -> String {
         let mut collaboration_result = String::new();
-        
+
         for agent_name in &agent_names {
             if let Some(agent) = self.agents.get(*agent_name) {
-                let _ = tx.send(AgentMessage {
-                    from: agent_name.to_string(),
-                    to: "All".to_string(),
-                    content: format!("Contributing {} expertise", agent.role),
-                }).await;
-                
+                let _ = tx
+                    .send(AgentMessage {
+                        from: agent_name.to_string(),
+                        to: "All".to_string(),
+                        content: format!("Contributing {} expertise", agent.role),
+                    })
+                    .await;
+
                 collaboration_result.push_str(&format!("✅ {} contributed\n", agent.name));
             }
         }
-        
+
         collaboration_result
     }
 
     pub fn get_agent_status(&self) -> String {
-        format!("🤖 Multi-Agent System Active: {} agents ready", self.agents.len())
+        format!(
+            "🤖 Multi-Agent System Active: {} agents ready",
+            self.agents.len()
+        )
     }
-    
+
     pub async fn analyze_request(&self, input: &str) -> Vec<String> {
         let mut actions = Vec::new();
-        
+
         // Deployment analysis
-        if input.contains("deploy") || input.contains("kubectl") || input.contains("pod") || input.contains("service") {
+        if input.contains("deploy")
+            || input.contains("kubectl")
+            || input.contains("pod")
+            || input.contains("service")
+        {
             actions.push("create_deployment_yaml".to_string());
             actions.push("execute_kubectl_commands".to_string());
             actions.push("verify_deployment".to_string());
         }
-        
+
         // Security analysis
         if input.contains("permission") || input.contains("auth") || input.contains("security") {
             actions.push("security_analysis".to_string());
         }
-        
+
         // Troubleshooting
         if input.contains("error") || input.contains("failed") || input.contains("fix") {
             actions.push("troubleshoot_issue".to_string());
         }
-        
+
         // General analysis (always active - "two eyes" approach)
         actions.push("comprehensive_analysis".to_string());
-        
+
         actions
     }
 
     pub async fn generate_deployment_yaml(&self, request: &str) -> String {
-        format!(r#"# Generated Kubernetes deployment for: {}
+        format!(
+            r#"# Generated Kubernetes deployment for: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -262,7 +299,9 @@ spec:
   ports:
   - port: 80
     targetPort: 80
-  type: LoadBalancer"#, request)
+  type: LoadBalancer"#,
+            request
+        )
     }
 
     pub async fn execute_deployment(&self, _yaml_content: &str) -> Vec<String> {
@@ -307,7 +346,8 @@ spec:
 
     // Add the missing methods for test_runner.rs
     pub async fn generate_terraform_template(&self, description: &str) -> String {
-        format!(r#"# Terraform template for: {}
+        format!(
+            r#"# Terraform template for: {}
 provider "aws" {{
   region = "us-west-2"
 }}
@@ -319,11 +359,14 @@ resource "aws_instance" "example" {{
   tags = {{
     Name = "HelloAI-Instance"
   }}
-}}"#, description)
+}}"#,
+            description
+        )
     }
 
     pub async fn generate_docker_compose(&self, description: &str) -> String {
-        format!(r#"# Docker Compose for: {}
+        format!(
+            r#"# Docker Compose for: {}
 version: '3.8'
 services:
   web:
@@ -341,11 +384,14 @@ services:
     environment:
       POSTGRES_DB: myapp
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: password"#, description)
+      POSTGRES_PASSWORD: password"#,
+            description
+        )
     }
 
     pub async fn generate_kubernetes_manifests(&self, description: &str) -> String {
-        format!(r#"# Kubernetes manifests for: {}
+        format!(
+            r#"# Kubernetes manifests for: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -364,11 +410,14 @@ spec:
       - name: nginx
         image: nginx:1.20
         ports:
-        - containerPort: 80"#, description)
+        - containerPort: 80"#,
+            description
+        )
     }
 
     pub async fn generate_security_policy(&self, description: &str) -> String {
-        format!(r#"# Security policy for: {}
+        format!(
+            r#"# Security policy for: {}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -377,21 +426,27 @@ spec:
   podSelector: {{}}
   policyTypes:
   - Ingress
-  - Egress"#, description)
+  - Egress"#,
+            description
+        )
     }
 
     pub async fn generate_monitoring_config(&self, description: &str) -> String {
-        format!(r#"# Monitoring configuration for: {}
+        format!(
+            r#"# Monitoring configuration for: {}
 global:
   scrape_interval: 15s
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']"#, description)
+      - targets: ['localhost:9090']"#,
+            description
+        )
     }
 
     pub async fn generate_ci_pipeline(&self, description: &str) -> String {
-        format!(r#"# CI Pipeline for: {}
+        format!(
+            r#"# CI Pipeline for: {}
 name: CI
 on: [push, pull_request]
 jobs:
@@ -400,20 +455,26 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
-      run: npm test"#, description)
+      run: npm test"#,
+            description
+        )
     }
 
     pub async fn generate_backup_strategy(&self, description: &str) -> String {
-        format!(r#"# Backup strategy for: {}
+        format!(
+            r#"# Backup strategy for: {}
 #!/bin/bash
 # Daily backup script
 DATE=$(date +%Y%m%d)
 pg_dump mydb > backup_$DATE.sql
-aws s3 cp backup_$DATE.sql s3://my-backups/"#, description)
+aws s3 cp backup_$DATE.sql s3://my-backups/"#,
+            description
+        )
     }
 
     pub async fn generate_network_topology(&self, description: &str) -> String {
-        format!(r#"# Network topology for: {}
+        format!(
+            r#"# Network topology for: {}
 # VPC Configuration
 resource "aws_vpc" "main" {{
   cidr_block = "10.0.0.0/16"
@@ -421,11 +482,14 @@ resource "aws_vpc" "main" {{
   tags = {{
     Name = "main-vpc"
   }}
-}}"#, description)
+}}"#,
+            description
+        )
     }
 
     pub async fn generate_api_specification(&self, description: &str) -> String {
-        format!(r#"# API specification for: {}
+        format!(
+            r#"# API specification for: {}
 openapi: 3.0.0
 info:
   title: My API
@@ -436,11 +500,14 @@ paths:
       summary: Get users
       responses:
         '200':
-          description: Success"#, description)
+          description: Success"#,
+            description
+        )
     }
 
     pub async fn generate_deployment_guide(&self, environment: &str) -> String {
-        format!(r#"# Deployment Guide for {} Environment
+        format!(
+            r#"# Deployment Guide for {} Environment
 
 ## Prerequisites
 - Kubernetes cluster access
@@ -467,6 +534,8 @@ paths:
 ### 4. Post-deployment
 - Update monitoring
 - Configure alerts
-- Document changes"#, environment)
+- Document changes"#,
+            environment
+        )
     }
 }

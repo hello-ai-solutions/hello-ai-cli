@@ -46,16 +46,16 @@ impl SystemContext {
         match self.get_effective_os() {
             "macos" => "brew",
             "windows" => "winget", // or choco
-            _ => "apt", // Default to apt for Linux, could be more sophisticated
+            _ => "apt",            // Default to apt for Linux, could be more sophisticated
         }
     }
 }
 
 fn detect_target_os_from_input(input: &str) -> Option<String> {
     let input_lower = input.to_lowercase();
-    
+
     // Windows indicators
-    if input_lower.contains("windows") 
+    if input_lower.contains("windows")
         || input_lower.contains("powershell.exe")
         || input_lower.contains("c:\\")
         || input_lower.contains("registry")
@@ -63,7 +63,8 @@ fn detect_target_os_from_input(input: &str) -> Option<String> {
         || input_lower.contains("event log")
         || input_lower.contains("wuauserv")
         || input_lower.contains("get-service")
-        || input_lower.contains("get-eventlog") {
+        || input_lower.contains("get-eventlog")
+    {
         return Some("windows".to_string());
     }
 
@@ -79,7 +80,8 @@ fn detect_target_os_from_input(input: &str) -> Option<String> {
         || input_lower.contains("centos")
         || input_lower.contains("rhel")
         || input_lower.contains("debian")
-        || input_lower.contains("linux server") {
+        || input_lower.contains("linux server")
+    {
         return Some("linux".to_string());
     }
 
@@ -89,7 +91,8 @@ fn detect_target_os_from_input(input: &str) -> Option<String> {
         || input_lower.contains("brew ")
         || input_lower.contains("launchctl")
         || input_lower.contains("/usr/local/")
-        || input_lower.contains("homebrew") {
+        || input_lower.contains("homebrew")
+    {
         return Some("macos".to_string());
     }
 
@@ -98,7 +101,8 @@ fn detect_target_os_from_input(input: &str) -> Option<String> {
         || input_lower.contains("docker")
         || input_lower.contains("kubectl exec")
         || input_lower.contains("inside")
-        || input_lower.contains("remote server") {
+        || input_lower.contains("remote server")
+    {
         // Don't assume OS for containers, let other indicators decide
         return None;
     }

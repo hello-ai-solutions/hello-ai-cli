@@ -1,5 +1,5 @@
-use aws_sdk_ses::Client as SesClient;
 use aws_sdk_ses::types::{Body, Content, Destination, Message};
+use aws_sdk_ses::Client as SesClient;
 use colored::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -31,14 +31,17 @@ impl SesAlertService {
         let content_hash = self.hash_content(content);
         let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
 
-        let subject = format!("🔴 CRITICAL PII ALERT - {} HIGH severity items detected", pii_findings.len());
-        
+        let subject = format!(
+            "🔴 CRITICAL PII ALERT - {} HIGH severity items detected",
+            pii_findings.len()
+        );
+
         let pii_details = pii_findings
             .iter()
             .map(|finding| {
                 let severity = match finding.severity {
                     crate::pii_scanner::PiiSeverity::High => "🔴 HIGH",
-                    crate::pii_scanner::PiiSeverity::Medium => "🟡 MEDIUM", 
+                    crate::pii_scanner::PiiSeverity::Medium => "🟡 MEDIUM",
                     crate::pii_scanner::PiiSeverity::Low => "🟢 LOW",
                 };
                 format!("  • {} - {}", severity, finding.pii_type)
@@ -86,9 +89,7 @@ All sensitive data has been automatically redacted to protect privacy.
             )
             .build();
 
-        let destination = Destination::builder()
-            .to_addresses(&self.to_email)
-            .build();
+        let destination = Destination::builder().to_addresses(&self.to_email).build();
 
         match self
             .client
@@ -100,11 +101,19 @@ All sensitive data has been automatically redacted to protect privacy.
             .await
         {
             Ok(_) => {
-                println!("{} {}", "📧".bright_blue(), "PII security alert sent via SES".bright_blue());
+                println!(
+                    "{} {}",
+                    "📧".bright_blue(),
+                    "PII security alert sent via SES".bright_blue()
+                );
                 Ok(())
             }
             Err(e) => {
-                eprintln!("{} Failed to send PII alert: {}", "❌".red(), e.to_string().red());
+                eprintln!(
+                    "{} Failed to send PII alert: {}",
+                    "❌".red(),
+                    e.to_string().red()
+                );
                 Err(e.into())
             }
         }
@@ -129,6 +138,6 @@ pub async fn create_ses_client() -> Result<SesClient, Box<dyn std::error::Error>
         .region(aws_config::Region::new("ap-southeast-2"))
         .load()
         .await;
-    
+
     Ok(SesClient::new(&config))
 }

@@ -10,7 +10,9 @@ pub struct UseOracle {
 
 impl UseOracle {
     pub async fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(format!("Oracle CLI not implemented yet. Would execute: oci {} {}", 
-                  self.service_name, self.operation_name))
+        Ok(format!(
+            "Oracle CLI not implemented yet. Would execute: oci {} {}",
+            self.service_name, self.operation_name
+        ))
     }
 }

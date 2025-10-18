@@ -10,7 +10,9 @@ pub struct UseGcp {
 
 impl UseGcp {
     pub async fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(format!("GCP CLI not implemented yet. Would execute: gcloud {} {}", 
-                  self.service_name, self.operation_name))
+        Ok(format!(
+            "GCP CLI not implemented yet. Would execute: gcloud {} {}",
+            self.service_name, self.operation_name
+        ))
     }
 }

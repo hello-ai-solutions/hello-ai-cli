@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct S3LogEntry {
@@ -49,9 +49,9 @@ impl S3Logger {
             message: message.to_string(),
             metadata,
         };
-        
+
         self.local_buffer.push(entry);
-        
+
         if self.local_buffer.len() >= 5 {
             let _ = self.flush_to_s3().await;
         }
@@ -64,7 +64,7 @@ impl S3Logger {
 
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
         let key = format!("{}/qcli_logs_{}.json", self.config.prefix, timestamp);
-        
+
         let logs_json = serde_json::to_string_pretty(&self.local_buffer)?;
         let temp_path = format!("/tmp/qcli_logs_{}.json", timestamp);
         tokio::fs::write(&temp_path, logs_json).await?;
@@ -91,10 +91,16 @@ impl S3Logger {
         let _ = tokio::fs::remove_file(&temp_path).await;
 
         if output.status.success() {
-            println!("📤 Logs uploaded to S3: s3://{}/{}", self.config.bucket, key);
+            println!(
+                "📤 Logs uploaded to S3: s3://{}/{}",
+                self.config.bucket, key
+            );
             self.local_buffer.clear();
         } else {
-            eprintln!("❌ S3 upload failed: {}", String::from_utf8_lossy(&output.stderr));
+            eprintln!(
+                "❌ S3 upload failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
 
         Ok(())
@@ -102,7 +108,7 @@ impl S3Logger {
 
     pub async fn load_config() -> S3LogConfig {
         let config_path = ".amazonq/s3_logs_config.json";
-        
+
         if tokio::fs::metadata(config_path).await.is_ok() {
             if let Ok(content) = tokio::fs::read_to_string(config_path).await {
                 if let Ok(config) = serde_json::from_str(&content) {

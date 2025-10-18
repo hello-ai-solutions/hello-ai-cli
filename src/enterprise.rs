@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -64,7 +64,7 @@ impl EnterpriseManager {
         if let Some(_sso) = &self.sso_config {
             // In real implementation, validate token with SSO provider
             let user_id = self.extract_user_from_token(token)?;
-            
+
             if let Some(user) = self.users.get(&user_id).cloned() {
                 self.log_action(&user_id, "login", "User authenticated via SSO");
                 Ok(user)
@@ -89,10 +89,13 @@ impl EnterpriseManager {
 
     pub fn check_quota(&mut self, user_id: &str) -> Result<bool, String> {
         let tomorrow_timestamp = self.get_tomorrow_timestamp();
-        
+
         if let Some(user) = self.users.get_mut(user_id) {
-            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+
             // Reset quota if new day
             if now > user.quota.reset_timestamp {
                 user.quota.used_requests = 0;
@@ -124,7 +127,11 @@ impl EnterpriseManager {
     }
 
     pub fn add_user(&mut self, user: User) {
-        self.log_action("admin", "user_added", &format!("Added user: {}", user.email));
+        self.log_action(
+            "admin",
+            "user_added",
+            &format!("Added user: {}", user.email),
+        );
         self.users.insert(user.id.clone(), user);
     }
 
@@ -139,7 +146,7 @@ impl EnterpriseManager {
 
     pub fn get_usage_analytics(&self) -> HashMap<String, u32> {
         let mut analytics = HashMap::new();
-        
+
         for entry in &self.audit_log {
             let count = analytics.entry(entry.action.clone()).or_insert(0);
             *count += 1;
@@ -150,7 +157,9 @@ impl EnterpriseManager {
 
     pub fn get_audit_log(&self, user_id: Option<&str>) -> Vec<AuditEntry> {
         match user_id {
-            Some(id) => self.audit_log.iter()
+            Some(id) => self
+                .audit_log
+                .iter()
                 .filter(|entry| entry.user_id == id)
                 .cloned()
                 .collect(),
@@ -159,8 +168,11 @@ impl EnterpriseManager {
     }
 
     fn log_action(&mut self, user_id: &str, action: &str, details: &str) {
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
         self.audit_log.push(AuditEntry {
             user_id: user_id.to_string(),
             action: action.to_string(),
@@ -175,7 +187,10 @@ impl EnterpriseManager {
     }
 
     fn get_tomorrow_timestamp(&self) -> u64 {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
         now + 86400 // 24 hours
     }
 }

@@ -19,7 +19,7 @@ pub async fn scan_with_azure_text_analytics(
 
     let client = reqwest::Client::new();
     let url = format!("{}/text/analytics/v3.1/entities/recognition/pii", endpoint);
-    
+
     let payload = json!({
         "documents": [
             {
@@ -40,7 +40,7 @@ pub async fn scan_with_azure_text_analytics(
 
     let response_text = response.text().await?;
     let json: Value = serde_json::from_str(&response_text)?;
-    
+
     if let Some(documents) = json["documents"].as_array() {
         if let Some(first_doc) = documents.first() {
             if let Some(entities) = first_doc["entities"].as_array() {
@@ -71,19 +71,22 @@ pub async fn scan_with_gcp_dlp(
     };
 
     if project.is_empty() {
-        return Err("GCP Project ID required. Set GCP_PROJECT_ID env var or configure in config.toml".into());
+        return Err(
+            "GCP Project ID required. Set GCP_PROJECT_ID env var or configure in config.toml"
+                .into(),
+        );
     }
 
     // For now, return a placeholder implementation
     // In a full implementation, you would use the Google Cloud DLP client library
     // This would require adding google-cloud-dlp dependency
-    
+
     // Basic heuristic check as fallback
-    let has_pii = text.contains("@") || 
-                  text.chars().filter(|c| c.is_numeric()).count() >= 10 ||
-                  text.to_lowercase().contains("ssn") ||
-                  text.to_lowercase().contains("social security");
-    
+    let has_pii = text.contains("@")
+        || text.chars().filter(|c| c.is_numeric()).count() >= 10
+        || text.to_lowercase().contains("ssn")
+        || text.to_lowercase().contains("social security");
+
     Ok(has_pii)
 }
 
@@ -94,7 +97,6 @@ pub async fn scan_with_aws_comprehend(
 ) -> Result<bool, Box<dyn std::error::Error>> {
     // This would use the existing AWS Comprehend implementation
     // For now, return a placeholder
-    let has_pii = text.contains("@") || 
-                  text.chars().filter(|c| c.is_numeric()).count() >= 10;
+    let has_pii = text.contains("@") || text.chars().filter(|c| c.is_numeric()).count() >= 10;
     Ok(has_pii)
 }

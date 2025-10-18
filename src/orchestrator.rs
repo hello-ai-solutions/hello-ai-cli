@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use colored::Colorize;
-use crate::Config;
 use crate::local_pii_scanner::LocalPiiScanner;
+use crate::Config;
+use colored::Colorize;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct AgentRole {
@@ -24,40 +24,56 @@ pub struct Orchestrator {
 impl Orchestrator {
     pub fn new() -> Self {
         let mut available_agents = HashMap::new();
-        
+
         // Define available agent roles
         available_agents.insert("security".to_string(), AgentRole {
             name: "Security Analyst".to_string(),
             prompt_template: "You are a security expert. Analyze the following for security vulnerabilities and best practices:".to_string(),
         });
-        
+
         available_agents.insert("architect".to_string(), AgentRole {
             name: "Solution Architect".to_string(),
             prompt_template: "You are a solution architect. Design and analyze the following system architecture:".to_string(),
         });
-        
-        available_agents.insert("devops".to_string(), AgentRole {
-            name: "DevOps Engineer".to_string(),
-            prompt_template: "You are a DevOps expert. Analyze and provide solutions for:".to_string(),
-        });
-        
+
+        available_agents.insert(
+            "devops".to_string(),
+            AgentRole {
+                name: "DevOps Engineer".to_string(),
+                prompt_template: "You are a DevOps expert. Analyze and provide solutions for:"
+                    .to_string(),
+            },
+        );
+
         available_agents.insert("troubleshooter".to_string(), AgentRole {
             name: "System Troubleshooter".to_string(),
             prompt_template: "You are a troubleshooting expert. Analyze the following logs/issues and provide solutions:".to_string(),
         });
-        
-        available_agents.insert("compliance".to_string(), AgentRole {
-            name: "Compliance Officer".to_string(),
-            prompt_template: "You are a compliance expert. Review the following for regulatory compliance:".to_string(),
-        });
+
+        available_agents.insert(
+            "compliance".to_string(),
+            AgentRole {
+                name: "Compliance Officer".to_string(),
+                prompt_template:
+                    "You are a compliance expert. Review the following for regulatory compliance:"
+                        .to_string(),
+            },
+        );
 
         Self {
             available_agents,
-            pii_scanner: LocalPiiScanner::new("http://localhost:11434".to_string(), "qwen2.5-coder:14b".to_string()),
+            pii_scanner: LocalPiiScanner::new(
+                "http://localhost:11434".to_string(),
+                "qwen2.5-coder:14b".to_string(),
+            ),
         }
     }
 
-    pub async fn execute_orchestrated_task(&mut self, request: &str, _config: &Config) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn execute_orchestrated_task(
+        &mut self,
+        request: &str,
+        _config: &Config,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Step 1: PII Scan
         println!("{}", "🔍 Scanning request for PII...".dimmed());
         match self.pii_scanner.scan_text(request).await {
@@ -68,28 +84,31 @@ impl Orchestrator {
                 }
             }
             Err(_) => {
-                println!("{}", "⚠️ PII scan failed, proceeding with caution...".dimmed());
+                println!(
+                    "{}",
+                    "⚠️ PII scan failed, proceeding with caution...".dimmed()
+                );
             }
         }
 
         // Step 2: Analyze request and create task plan
         println!("{}", "🧠 Orchestrator analyzing request...".dimmed());
         let task_plan = self.create_task_plan(request).await?;
-        
+
         println!("{} Task Plan Created:", "📋".bright_blue());
         println!("  {} {}", "Task:".dimmed(), task_plan.description);
         println!("  {} {}", "Agents:".dimmed(), task_plan.agents.len());
-        
+
         // Step 3: Execute agents in order
         let mut results = HashMap::new();
-        
+
         for agent_name in &task_plan.execution_order {
             if let Some(agent) = task_plan.agents.iter().find(|a| &a.name == agent_name) {
                 println!("{} Executing agent: {}", "🤖".dimmed(), agent.name.dimmed());
-                
+
                 let agent_result = self.execute_agent(agent, request, &results).await?;
                 results.insert(agent_name.clone(), agent_result);
-                
+
                 println!("{} {} completed", "✓".green().dimmed(), agent.name.dimmed());
             }
         }
@@ -97,44 +116,60 @@ impl Orchestrator {
         // Step 4: Synthesize final response
         println!("{}", "🎯 Synthesizing final response...".dimmed());
         let final_response = self.synthesize_response(&task_plan, &results).await?;
-        
+
         Ok(final_response)
     }
 
-    async fn create_task_plan(&self, request: &str) -> Result<TaskPlan, Box<dyn std::error::Error>> {
+    async fn create_task_plan(
+        &self,
+        request: &str,
+    ) -> Result<TaskPlan, Box<dyn std::error::Error>> {
         let mut selected_agents = Vec::new();
         let mut execution_order = Vec::new();
 
         // Analyze request to determine required agents
-        if request.contains("security") || request.contains("vulnerability") || request.contains("best practices") {
+        if request.contains("security")
+            || request.contains("vulnerability")
+            || request.contains("best practices")
+        {
             if let Some(agent) = self.available_agents.get("security") {
                 selected_agents.push(agent.clone());
                 execution_order.push("Security Analyst".to_string());
             }
         }
 
-        if request.contains("microservice") || request.contains("architecture") || request.contains("dependency") {
+        if request.contains("microservice")
+            || request.contains("architecture")
+            || request.contains("dependency")
+        {
             if let Some(agent) = self.available_agents.get("architect") {
                 selected_agents.push(agent.clone());
                 execution_order.push("Solution Architect".to_string());
             }
         }
 
-        if request.contains("logs") || request.contains("troubleshoot") || request.contains("debug") {
+        if request.contains("logs") || request.contains("troubleshoot") || request.contains("debug")
+        {
             if let Some(agent) = self.available_agents.get("troubleshooter") {
                 selected_agents.push(agent.clone());
                 execution_order.push("System Troubleshooter".to_string());
             }
         }
 
-        if request.contains("deploy") || request.contains("ci/cd") || request.contains("infrastructure") {
+        if request.contains("deploy")
+            || request.contains("ci/cd")
+            || request.contains("infrastructure")
+        {
             if let Some(agent) = self.available_agents.get("devops") {
                 selected_agents.push(agent.clone());
                 execution_order.push("DevOps Engineer".to_string());
             }
         }
 
-        if request.contains("compliance") || request.contains("audit") || request.contains("governance") {
+        if request.contains("compliance")
+            || request.contains("audit")
+            || request.contains("governance")
+        {
             if let Some(agent) = self.available_agents.get("compliance") {
                 selected_agents.push(agent.clone());
                 execution_order.push("Compliance Officer".to_string());
@@ -156,7 +191,12 @@ impl Orchestrator {
         })
     }
 
-    async fn execute_agent(&self, agent: &AgentRole, request: &str, previous_results: &HashMap<String, String>) -> Result<String, Box<dyn std::error::Error>> {
+    async fn execute_agent(
+        &self,
+        agent: &AgentRole,
+        request: &str,
+        previous_results: &HashMap<String, String>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // Build context from previous agent results
         let mut context = String::new();
         if !previous_results.is_empty() {
@@ -168,8 +208,10 @@ impl Orchestrator {
         }
 
         // Create agent-specific prompt
-        let _full_prompt = format!("{}\n\nContext: {}\n\nRequest: {}", 
-            agent.prompt_template, context, request);
+        let _full_prompt = format!(
+            "{}\n\nContext: {}\n\nRequest: {}",
+            agent.prompt_template, context, request
+        );
 
         // Simulate agent execution (in real implementation, this would call the specific LLM)
         let response = match agent.name.as_str() {
@@ -185,7 +227,8 @@ impl Orchestrator {
     }
 
     async fn simulate_security_analysis(&self, request: &str) -> String {
-        format!("Security Analysis Results:
+        format!(
+            "Security Analysis Results:
 • Authentication: Implement multi-factor authentication
 • Authorization: Use role-based access control (RBAC)
 • Data Protection: Encrypt data at rest and in transit
@@ -193,14 +236,20 @@ impl Orchestrator {
 • Monitoring: Enable security logging and alerting
 • Compliance: Follow OWASP Top 10 guidelines
 
-Specific to your request: {}", 
-        if request.contains("microservice") { "Implement service mesh for secure inter-service communication" }
-        else if request.contains("logs") { "Ensure logs don't contain sensitive data" }
-        else { "Apply security best practices for your use case" })
+Specific to your request: {}",
+            if request.contains("microservice") {
+                "Implement service mesh for secure inter-service communication"
+            } else if request.contains("logs") {
+                "Ensure logs don't contain sensitive data"
+            } else {
+                "Apply security best practices for your use case"
+            }
+        )
     }
 
     async fn simulate_architecture_analysis(&self, request: &str) -> String {
-        format!("Architecture Analysis Results:
+        format!(
+            "Architecture Analysis Results:
 • Design Pattern: Microservices with API Gateway
 • Data Flow: Event-driven architecture with message queues
 • Scalability: Horizontal scaling with load balancers
@@ -208,14 +257,20 @@ Specific to your request: {}",
 • Dependencies: Minimize coupling between services
 • Monitoring: Distributed tracing and health checks
 
-Specific recommendations: {}", 
-        if request.contains("dependency") { "Use dependency injection and service discovery" }
-        else if request.contains("troubleshoot") { "Implement comprehensive logging and monitoring" }
-        else { "Follow 12-factor app principles" })
+Specific recommendations: {}",
+            if request.contains("dependency") {
+                "Use dependency injection and service discovery"
+            } else if request.contains("troubleshoot") {
+                "Implement comprehensive logging and monitoring"
+            } else {
+                "Follow 12-factor app principles"
+            }
+        )
     }
 
     async fn simulate_devops_analysis(&self, request: &str) -> String {
-        format!("DevOps Analysis Results:
+        format!(
+            "DevOps Analysis Results:
 • CI/CD Pipeline: Automated testing and deployment
 • Infrastructure: Infrastructure as Code (Terraform)
 • Containerization: Docker with Kubernetes orchestration
@@ -223,14 +278,20 @@ Specific recommendations: {}",
 • Backup Strategy: Automated backups with point-in-time recovery
 • Deployment: Blue-green deployment strategy
 
-Implementation steps: {}", 
-        if request.contains("microservice") { "Set up service mesh and container registry" }
-        else if request.contains("logs") { "Configure centralized logging with ELK stack" }
-        else { "Implement GitOps workflow" })
+Implementation steps: {}",
+            if request.contains("microservice") {
+                "Set up service mesh and container registry"
+            } else if request.contains("logs") {
+                "Configure centralized logging with ELK stack"
+            } else {
+                "Implement GitOps workflow"
+            }
+        )
     }
 
     async fn simulate_troubleshooting_analysis(&self, request: &str) -> String {
-        format!("Troubleshooting Analysis Results:
+        format!(
+            "Troubleshooting Analysis Results:
 • Log Analysis: Check application and system logs
 • Performance Metrics: Monitor CPU, memory, and network usage
 • Error Patterns: Identify recurring error messages
@@ -238,14 +299,20 @@ Implementation steps: {}",
 • Resource Constraints: Check for resource bottlenecks
 • Configuration: Validate configuration settings
 
-Action items: {}", 
-        if request.contains("logs") { "Parse logs for error patterns and performance issues" }
-        else if request.contains("microservice") { "Check service-to-service communication" }
-        else { "Perform root cause analysis" })
+Action items: {}",
+            if request.contains("logs") {
+                "Parse logs for error patterns and performance issues"
+            } else if request.contains("microservice") {
+                "Check service-to-service communication"
+            } else {
+                "Perform root cause analysis"
+            }
+        )
     }
 
     async fn simulate_compliance_analysis(&self, request: &str) -> String {
-        format!("Compliance Analysis Results:
+        format!(
+            "Compliance Analysis Results:
 • Data Privacy: GDPR/CCPA compliance requirements
 • Security Standards: SOC 2 Type II certification
 • Industry Regulations: Sector-specific compliance (HIPAA, PCI-DSS)
@@ -253,27 +320,36 @@ Action items: {}",
 • Access Controls: Principle of least privilege
 • Data Retention: Automated data lifecycle management
 
-Compliance checklist: {}", 
-        if request.contains("security") { "Implement security controls per compliance framework" }
-        else if request.contains("logs") { "Ensure audit logs meet retention requirements" }
-        else { "Document compliance procedures" })
+Compliance checklist: {}",
+            if request.contains("security") {
+                "Implement security controls per compliance framework"
+            } else if request.contains("logs") {
+                "Ensure audit logs meet retention requirements"
+            } else {
+                "Document compliance procedures"
+            }
+        )
     }
 
-    async fn synthesize_response(&self, task_plan: &TaskPlan, results: &HashMap<String, String>) -> Result<String, Box<dyn std::error::Error>> {
+    async fn synthesize_response(
+        &self,
+        task_plan: &TaskPlan,
+        results: &HashMap<String, String>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut final_response = String::new();
-        
+
         final_response.push_str(&format!("🎭 Orchestrated Analysis Complete\n"));
         final_response.push_str(&format!("Task: {}\n\n", task_plan.description));
-        
+
         for agent_name in &task_plan.execution_order {
             if let Some(result) = results.get(agent_name) {
                 final_response.push_str(&format!("## {} Report\n{}\n\n", agent_name, result));
             }
         }
-        
+
         final_response.push_str("## Summary\n");
         final_response.push_str("All agents have completed their analysis. Review the individual reports above for detailed findings and recommendations.\n");
-        
+
         Ok(final_response)
     }
 

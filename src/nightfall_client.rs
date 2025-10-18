@@ -91,7 +91,11 @@ impl NightfallClient {
         }
     }
 
-    pub async fn scan_text(&self, text: &str, _source: &str) -> Result<NightfallScanResponse, Box<dyn std::error::Error>> {
+    pub async fn scan_text(
+        &self,
+        text: &str,
+        _source: &str,
+    ) -> Result<NightfallScanResponse, Box<dyn std::error::Error>> {
         let request = NightfallScanRequest {
             payload: vec![text.to_string()],
             detection_rules: vec![DetectionRule {
@@ -158,9 +162,14 @@ impl NightfallClient {
     #[allow(dead_code)]
     pub fn display_nightfall_results(&self, result: &NightfallScanResponse, source: &str) {
         if !result.findings.is_empty() {
-            println!("\n{} {} {}", "🌙".purple(), "NIGHTFALL PII DETECTED".bright_purple().bold(), format!("in {}", source).purple());
+            println!(
+                "\n{} {} {}",
+                "🌙".purple(),
+                "NIGHTFALL PII DETECTED".bright_purple().bold(),
+                format!("in {}", source).purple()
+            );
             println!("{}", "─".repeat(50).bright_black());
-            
+
             for finding in &result.findings {
                 let confidence_color = match finding.confidence.as_str() {
                     "VERY_LIKELY" => "🔴 VERY_LIKELY".bright_red(),
@@ -168,22 +177,35 @@ impl NightfallClient {
                     "POSSIBLE" => "🟢 POSSIBLE".bright_green(),
                     _ => finding.confidence.as_str().white(),
                 };
-                
-                println!("{} {} - {}", 
-                    confidence_color, 
+
+                println!(
+                    "{} {} - {}",
+                    confidence_color,
                     finding.detector.display_name.bright_white(),
                     "DETECTED".bright_black()
                 );
             }
             println!("{}", "─".repeat(50).bright_black());
         } else {
-            println!("{} {} {}", "✅".green(), "NIGHTFALL SCAN CLEAN".bright_green(), format!("- {}", source).bright_black());
+            println!(
+                "{} {} {}",
+                "✅".green(),
+                "NIGHTFALL SCAN CLEAN".bright_green(),
+                format!("- {}", source).bright_black()
+            );
         }
     }
 
     pub fn display_simple_nightfall_scan(&self, has_pii: bool) {
-        println!("{} {}", "PII Scan:".bright_white(), 
-            if has_pii { "True".bright_red() } else { "False".bright_green() });
+        println!(
+            "{} {}",
+            "PII Scan:".bright_white(),
+            if has_pii {
+                "True".bright_red()
+            } else {
+                "False".bright_green()
+            }
+        );
     }
 
     pub async fn scan_text_simple(&self, text: &str) -> Result<bool, Box<dyn std::error::Error>> {
@@ -193,21 +215,33 @@ impl NightfallClient {
 
     pub fn redact_nightfall_findings(&self, text: &str, findings: &[NightfallFinding]) -> String {
         let mut redacted_text = text.to_string();
-        
+
         // Sort findings by start position in reverse order to avoid offset issues
         let mut sorted_findings = findings.to_vec();
-        sorted_findings.sort_by(|a, b| b.location.codepoint_range.start.cmp(&a.location.codepoint_range.start));
-        
+        sorted_findings.sort_by(|a, b| {
+            b.location
+                .codepoint_range
+                .start
+                .cmp(&a.location.codepoint_range.start)
+        });
+
         for finding in sorted_findings {
             let start = finding.location.codepoint_range.start as usize;
             let end = finding.location.codepoint_range.end as usize;
-            
+
             if start < redacted_text.len() && end <= redacted_text.len() {
-                let replacement = format!("[{}-REDACTED]", finding.detector.display_name.to_uppercase().replace(" ", "-"));
+                let replacement = format!(
+                    "[{}-REDACTED]",
+                    finding
+                        .detector
+                        .display_name
+                        .to_uppercase()
+                        .replace(" ", "-")
+                );
                 redacted_text.replace_range(start..end, &replacement);
             }
         }
-        
+
         redacted_text
     }
 }

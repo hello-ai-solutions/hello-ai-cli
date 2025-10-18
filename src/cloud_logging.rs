@@ -1,8 +1,8 @@
+use chrono::Utc;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use chrono::Utc;
 
 pub async fn log_message(
     logging_config: &crate::LoggingConfig,
@@ -32,20 +32,20 @@ async fn log_to_local(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Create logs directory if it doesn't exist
     fs::create_dir_all(&config.local_path)?;
-    
+
     let log_file_path = Path::new(&config.local_path).join(&config.local_filename);
-    
+
     // Append to log file
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_file_path)?;
-    
+
     file.write_all(log_entry.as_bytes())?;
     file.flush()?;
-    
+
     // TODO: Implement log rotation based on max_file_size_mb and max_files
-    
+
     Ok(())
 }
 

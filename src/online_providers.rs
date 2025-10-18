@@ -40,7 +40,7 @@ pub async fn get_openai_response(
 
     let response_text = response.text().await?;
     let json: Value = serde_json::from_str(&response_text)?;
-    
+
     if let Some(choices) = json["choices"].as_array() {
         if let Some(first_choice) = choices.first() {
             if let Some(content) = first_choice["message"]["content"].as_str() {
@@ -70,7 +70,7 @@ pub async fn get_gemini_response(
 
     let client = reqwest::Client::new();
     let url = format!("{}/{}:generateContent?key={}", endpoint, model, key);
-    
+
     let payload = json!({
         "contents": [{
             "parts": [{
@@ -92,7 +92,7 @@ pub async fn get_gemini_response(
 
     let response_text = response.text().await?;
     let json: Value = serde_json::from_str(&response_text)?;
-    
+
     if let Some(candidates) = json["candidates"].as_array() {
         if let Some(first_candidate) = candidates.first() {
             if let Some(content) = first_candidate["content"]["parts"].as_array() {

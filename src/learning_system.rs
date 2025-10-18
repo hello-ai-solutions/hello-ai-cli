@@ -1,8 +1,8 @@
+use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use chrono::Timelike;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProfile {
@@ -57,7 +57,7 @@ impl LearningSystem {
     pub fn new() -> Self {
         let profiles_dir = ".amazonq/user_profiles".to_string();
         fs::create_dir_all(&profiles_dir).ok();
-        
+
         Self {
             profiles_dir,
             current_user: None,
@@ -68,9 +68,12 @@ impl LearningSystem {
         self.current_user = Some(user_id.to_string());
     }
 
-    pub async fn load_or_create_profile(&self, user_id: &str) -> Result<UserProfile, Box<dyn std::error::Error>> {
+    pub async fn load_or_create_profile(
+        &self,
+        user_id: &str,
+    ) -> Result<UserProfile, Box<dyn std::error::Error>> {
         let profile_path = format!("{}/{}.json", self.profiles_dir, user_id);
-        
+
         if Path::new(&profile_path).exists() {
             let content = fs::read_to_string(&profile_path)?;
             Ok(serde_json::from_str(&content)?)
@@ -100,24 +103,40 @@ impl LearningSystem {
         }
     }
 
-    pub async fn save_profile(&self, profile: &UserProfile) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn save_profile(
+        &self,
+        profile: &UserProfile,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let profile_path = format!("{}/{}.json", self.profiles_dir, profile.user_id);
         let content = serde_json::to_string_pretty(profile)?;
         fs::write(&profile_path, content)?;
         Ok(())
     }
 
-    pub async fn record_usage(&self, user_id: &str, command: &str, file_type: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn record_usage(
+        &self,
+        user_id: &str,
+        command: &str,
+        file_type: Option<&str>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut profile = self.load_or_create_profile(user_id).await?;
-        
+
         // Update command usage
-        *profile.usage_patterns.most_used_commands.entry(command.to_string()).or_insert(0) += 1;
-        
+        *profile
+            .usage_patterns
+            .most_used_commands
+            .entry(command.to_string())
+            .or_insert(0) += 1;
+
         // Update file type usage
         if let Some(ft) = file_type {
-            *profile.usage_patterns.common_file_types.entry(ft.to_string()).or_insert(0) += 1;
+            *profile
+                .usage_patterns
+                .common_file_types
+                .entry(ft.to_string())
+                .or_insert(0) += 1;
         }
-        
+
         // Record learning event
         profile.learning_history.push(LearningEvent {
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -126,14 +145,20 @@ impl LearningSystem {
             user_feedback: None,
             success: true,
         });
-        
+
         self.save_profile(&profile).await?;
         Ok(())
     }
 
-    pub async fn record_feedback(&self, user_id: &str, context: &str, feedback: &str, success: bool) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn record_feedback(
+        &self,
+        user_id: &str,
+        context: &str,
+        feedback: &str,
+        success: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut profile = self.load_or_create_profile(user_id).await?;
-        
+
         profile.learning_history.push(LearningEvent {
             timestamp: chrono::Utc::now().to_rfc3339(),
             event_type: "user_feedback".to_string(),
@@ -141,21 +166,33 @@ impl LearningSystem {
             user_feedback: Some(feedback.to_string()),
             success,
         });
-        
+
         self.save_profile(&profile).await?;
         Ok(())
     }
 
-    pub async fn get_personalized_suggestions(&self, user_id: &str, context: &str) -> Result<Vec<PersonalizedSuggestion>, Box<dyn std::error::Error>> {
+    pub async fn get_personalized_suggestions(
+        &self,
+        user_id: &str,
+        context: &str,
+    ) -> Result<Vec<PersonalizedSuggestion>, Box<dyn std::error::Error>> {
         let profile = self.load_or_create_profile(user_id).await?;
         let mut suggestions = Vec::new();
 
         // Command suggestions based on usage patterns
-        if let Some((most_used_cmd, count)) = profile.usage_patterns.most_used_commands.iter().max_by_key(|(_, &count)| count) {
+        if let Some((most_used_cmd, count)) = profile
+            .usage_patterns
+            .most_used_commands
+            .iter()
+            .max_by_key(|(_, &count)| count)
+        {
             if *count > 5 {
                 suggestions.push(PersonalizedSuggestion {
                     suggestion_type: "command_shortcut".to_string(),
-                    content: format!("You frequently use '{}'. Consider creating an alias for faster access.", most_used_cmd),
+                    content: format!(
+                        "You frequently use '{}'. Consider creating an alias for faster access.",
+                        most_used_cmd
+                    ),
                     confidence: 0.8,
                     reasoning: format!("Used {} times in recent sessions", count),
                 });
@@ -183,24 +220,31 @@ impl LearningSystem {
                     confidence: 0.9,
                     reasoning: "Beginner level - focus on understanding".to_string(),
                 });
-            },
+            }
             "advanced" => {
                 suggestions.push(PersonalizedSuggestion {
                     suggestion_type: "advanced_feature".to_string(),
-                    content: "Consider using /refactor for code optimization opportunities".to_string(),
+                    content: "Consider using /refactor for code optimization opportunities"
+                        .to_string(),
                     confidence: 0.8,
                     reasoning: "Advanced level - focus on optimization".to_string(),
                 });
-            },
+            }
             _ => {}
         }
 
         // Time-based suggestions
         let current_hour = chrono::Utc::now().hour() as u8;
-        if profile.usage_patterns.peak_usage_hours.contains(&current_hour) {
+        if profile
+            .usage_patterns
+            .peak_usage_hours
+            .contains(&current_hour)
+        {
             suggestions.push(PersonalizedSuggestion {
                 suggestion_type: "productivity_tip".to_string(),
-                content: "This is your peak productivity time! Consider tackling complex tasks now.".to_string(),
+                content:
+                    "This is your peak productivity time! Consider tackling complex tasks now."
+                        .to_string(),
                 confidence: 0.6,
                 reasoning: "Based on your usage patterns".to_string(),
             });
@@ -209,9 +253,13 @@ impl LearningSystem {
         Ok(suggestions)
     }
 
-    pub async fn adapt_response_style(&self, user_id: &str, base_response: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn adapt_response_style(
+        &self,
+        user_id: &str,
+        base_response: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let profile = self.load_or_create_profile(user_id).await?;
-        
+
         match profile.preferences.response_format.as_str() {
             "concise" => Ok(self.make_concise(base_response)),
             "detailed" => Ok(self.make_detailed(base_response)),
@@ -224,7 +272,10 @@ impl LearningSystem {
         // Simplify response for concise preference
         let lines: Vec<&str> = response.lines().collect();
         if lines.len() > 5 {
-            format!("{}...\n\n(Use /help for full details)", lines[..3].join("\n"))
+            format!(
+                "{}...\n\n(Use /help for full details)",
+                lines[..3].join("\n")
+            )
         } else {
             response.to_string()
         }
@@ -244,26 +295,44 @@ impl LearningSystem {
         }
     }
 
-    pub async fn update_preferences(&self, user_id: &str, preferences: UserPreferences) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn update_preferences(
+        &self,
+        user_id: &str,
+        preferences: UserPreferences,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut profile = self.load_or_create_profile(user_id).await?;
         profile.preferences = preferences;
         self.save_profile(&profile).await?;
         Ok(())
     }
 
-    pub async fn get_learning_insights(&self, user_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn get_learning_insights(
+        &self,
+        user_id: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let profile = self.load_or_create_profile(user_id).await?;
-        
-        let total_commands = profile.usage_patterns.most_used_commands.values().sum::<u32>();
-        let most_used = profile.usage_patterns.most_used_commands.iter()
+
+        let total_commands = profile
+            .usage_patterns
+            .most_used_commands
+            .values()
+            .sum::<u32>();
+        let most_used = profile
+            .usage_patterns
+            .most_used_commands
+            .iter()
             .max_by_key(|(_, &count)| count)
             .map(|(cmd, count)| format!("{} ({} times)", cmd, count))
             .unwrap_or("None".to_string());
-        
+
         let success_rate = if profile.learning_history.is_empty() {
             0.0
         } else {
-            let successful = profile.learning_history.iter().filter(|e| e.success).count();
+            let successful = profile
+                .learning_history
+                .iter()
+                .filter(|e| e.success)
+                .count();
             (successful as f32 / profile.learning_history.len() as f32) * 100.0
         };
 

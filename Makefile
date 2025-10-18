@@ -1,6 +1,6 @@
 # Makefile for Hello AI CLI
 
-.PHONY: build test clean install format lint check all help
+.PHONY: build test clean install format lint check all help smoke-test
 
 # Default target
 all: format lint build test
@@ -11,9 +11,17 @@ build:
 	cargo build --release
 
 # Run tests
-test: build
-	@echo "🧪 Running tests..."
+test: build smoke-test
+	@echo "🧪 Running unit tests..."
 	cargo test
+
+# Run smoke tests (basic functionality validation)
+smoke-test: build
+	@echo "💨 Running smoke tests..."
+	AI_CLI_BIN=./target/release/hello-ai-cli ./scripts/smoke-test.sh
+
+# Run integration tests (requires LLM endpoint)
+integration-test: build
 	@echo "🚀 Running integration tests..."
 	AI_CLI_BIN=./target/release/hello-ai-cli ./scripts/run-tests.sh
 
@@ -73,22 +81,29 @@ release:
 	@echo "🚀 Building optimized release..."
 	RUSTFLAGS="-C target-cpu=native" cargo build --release
 
+# CI/CD pipeline simulation
+ci: format lint build test
+	@echo "🎯 CI/CD pipeline completed successfully!"
+
 # Help
 help:
 	@echo "Hello AI CLI - Available commands:"
 	@echo ""
-	@echo "  build         - Build the project in release mode"
-	@echo "  test          - Run all tests (unit + integration)"
-	@echo "  dev           - Build debug version"
-	@echo "  clean         - Clean build artifacts"
-	@echo "  install       - Install locally"
-	@echo "  format        - Format code with rustfmt"
-	@echo "  lint          - Run clippy linter"
-	@echo "  check         - Check code without building"
-	@echo "  audit         - Run security audit"
-	@echo "  test-scenario - Run interactive test scenario"
-	@echo "  docker-build  - Build Docker image"
-	@echo "  docker-run    - Build and run Docker container"
-	@echo "  release       - Build optimized release"
-	@echo "  all           - Run format, lint, build, and test"
-	@echo "  help          - Show this help message"
+	@echo "  build           - Build the project in release mode"
+	@echo "  test            - Run unit tests and smoke tests"
+	@echo "  smoke-test      - Run basic functionality validation"
+	@echo "  integration-test- Run full integration tests (needs LLM)"
+	@echo "  dev             - Build debug version"
+	@echo "  clean           - Clean build artifacts"
+	@echo "  install         - Install locally"
+	@echo "  format          - Format code with rustfmt"
+	@echo "  lint            - Run clippy linter"
+	@echo "  check           - Check code without building"
+	@echo "  audit           - Run security audit"
+	@echo "  test-scenario   - Run interactive test scenario"
+	@echo "  docker-build    - Build Docker image"
+	@echo "  docker-run      - Build and run Docker container"
+	@echo "  release         - Build optimized release"
+	@echo "  ci              - Simulate CI/CD pipeline"
+	@echo "  all             - Run format, lint, build, and test"
+	@echo "  help            - Show this help message"

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefactoringSuggestion {
@@ -49,61 +49,71 @@ impl RefactoringAssistant {
                 impact: "Improved maintainability".to_string(),
             },
         ];
-        
+
         Self { rules }
     }
 
-    pub async fn analyze_file(&self, file_path: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    pub async fn analyze_file(
+        &self,
+        file_path: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(file_path)?;
         let mut suggestions = Vec::new();
-        
+
         // Analyze for various refactoring opportunities
         suggestions.extend(self.find_unwrap_usage(&content).await?);
         suggestions.extend(self.find_long_functions(&content).await?);
         suggestions.extend(self.find_duplicate_code(&content).await?);
         suggestions.extend(self.find_magic_numbers(&content).await?);
         suggestions.extend(self.find_complex_conditions(&content).await?);
-        
+
         Ok(suggestions)
     }
 
-    async fn find_unwrap_usage(&self, content: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    async fn find_unwrap_usage(
+        &self,
+        content: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
-        
+
         for (line_num, line) in content.lines().enumerate() {
             if line.contains(".unwrap()") {
                 suggestions.push(RefactoringSuggestion {
                     suggestion_type: "Error Handling".to_string(),
                     line: line_num + 1,
                     original: line.trim().to_string(),
-                    improved: line.replace(".unwrap()", ".expect(\"Add descriptive error message\")"),
+                    improved: line
+                        .replace(".unwrap()", ".expect(\"Add descriptive error message\")"),
                     reason: "unwrap() can cause panics without context".to_string(),
                     impact: "Better error messages and debugging".to_string(),
                 });
             }
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn find_long_functions(&self, content: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    async fn find_long_functions(
+        &self,
+        content: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
         let mut current_function = None;
         let mut function_start = 0;
         let mut brace_count = 0;
-        
+
         for (line_num, line) in lines.iter().enumerate() {
             if line.trim_start().starts_with("fn ") {
                 current_function = Some(line.trim());
                 function_start = line_num;
                 brace_count = 0;
             }
-            
+
             if current_function.is_some() {
                 brace_count += line.chars().filter(|&c| c == '{').count() as i32;
                 brace_count -= line.chars().filter(|&c| c == '}').count() as i32;
-                
+
                 if brace_count == 0 && line.contains('}') {
                     let function_length = line_num - function_start + 1;
                     if function_length > 50 {
@@ -120,24 +130,28 @@ impl RefactoringAssistant {
                 }
             }
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn find_duplicate_code(&self, content: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    async fn find_duplicate_code(
+        &self,
+        content: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
         let mut line_counts = HashMap::new();
-        
+
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             if trimmed.len() > 10 && !trimmed.starts_with("//") {
-                line_counts.entry(trimmed.to_string())
+                line_counts
+                    .entry(trimmed.to_string())
                     .or_insert_with(Vec::new)
                     .push(line_num + 1);
             }
         }
-        
+
         for (line_content, occurrences) in line_counts {
             if occurrences.len() > 2 {
                 suggestions.push(RefactoringSuggestion {
@@ -150,13 +164,16 @@ impl RefactoringAssistant {
                 });
             }
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn find_magic_numbers(&self, content: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    async fn find_magic_numbers(
+        &self,
+        content: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
-        
+
         for (line_num, line) in content.lines().enumerate() {
             // Look for numeric literals that aren't 0, 1, or obvious values
             let words: Vec<&str> = line.split_whitespace().collect();
@@ -175,13 +192,16 @@ impl RefactoringAssistant {
                 }
             }
         }
-        
+
         Ok(suggestions)
     }
 
-    async fn find_complex_conditions(&self, content: &str) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
+    async fn find_complex_conditions(
+        &self,
+        content: &str,
+    ) -> Result<Vec<RefactoringSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
-        
+
         for (line_num, line) in content.lines().enumerate() {
             if line.contains("if ") {
                 let condition_complexity = line.matches("&&").count() + line.matches("||").count();
@@ -197,25 +217,33 @@ impl RefactoringAssistant {
                 }
             }
         }
-        
+
         Ok(suggestions)
     }
 
     pub fn generate_refactoring_report(&self, suggestions: &[RefactoringSuggestion]) -> String {
         let mut report = String::from("# Refactoring Report\n\n");
-        
+
         let mut by_type = HashMap::new();
         for suggestion in suggestions {
-            by_type.entry(suggestion.suggestion_type.clone())
+            by_type
+                .entry(suggestion.suggestion_type.clone())
                 .or_insert_with(Vec::new)
                 .push(suggestion);
         }
-        
-        report.push_str(&format!("Found {} refactoring opportunities\n\n", suggestions.len()));
-        
+
+        report.push_str(&format!(
+            "Found {} refactoring opportunities\n\n",
+            suggestions.len()
+        ));
+
         for (suggestion_type, items) in by_type {
-            report.push_str(&format!("## {} ({} items)\n\n", suggestion_type, items.len()));
-            
+            report.push_str(&format!(
+                "## {} ({} items)\n\n",
+                suggestion_type,
+                items.len()
+            ));
+
             for item in items {
                 report.push_str(&format!(
                     "**Line {}:**\n\
@@ -227,24 +255,28 @@ impl RefactoringAssistant {
                 ));
             }
         }
-        
+
         report
     }
 
-    pub async fn apply_refactoring(&self, file_path: &str, suggestion: &RefactoringSuggestion) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn apply_refactoring(
+        &self,
+        file_path: &str,
+        suggestion: &RefactoringSuggestion,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(file_path)?;
         let lines: Vec<&str> = content.lines().collect();
-        
+
         if suggestion.line > lines.len() {
             return Err("Line number out of range".into());
         }
-        
+
         let mut new_lines = lines.clone();
         new_lines[suggestion.line - 1] = &suggestion.improved;
-        
+
         let new_content = new_lines.join("\n");
         fs::write(file_path, &new_content)?;
-        
+
         Ok(format!("Applied refactoring to line {}", suggestion.line))
     }
 }

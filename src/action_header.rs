@@ -62,10 +62,10 @@ pub fn parse_action_header(response: &str) -> Option<(ActionHeader, String)> {
     // Find YAML block between --- and ...
     let start = response.find("---")?;
     let end = response[start..].find("...")?;
-    
+
     let yaml_block = &response[start + 3..start + end].trim();
     let remaining = &response[start + end + 3..].trim();
-    
+
     match serde_yaml::from_str::<ActionHeader>(yaml_block) {
         Ok(header) => Some((header, remaining.to_string())),
         Err(_) => None,
@@ -217,7 +217,7 @@ Contents of test/: file1.rs, file2.rs"#;
 
         let result = parse_action_header(response);
         assert!(result.is_some());
-        
+
         let (header, remaining) = result.unwrap();
         assert!(matches!(header.intent, Intent::Inspect));
         assert_eq!(header.project_type, "rust");
@@ -247,7 +247,7 @@ Created Dockerfile. Build now?"#;
 
         let result = parse_action_header(response);
         assert!(result.is_some());
-        
+
         let (header, _) = result.unwrap();
         assert!(matches!(header.intent, Intent::Containerize));
         assert_eq!(header.create.len(), 1);

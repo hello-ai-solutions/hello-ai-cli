@@ -1,11 +1,11 @@
 #![allow(dead_code)]
+use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
-use notify::{Watcher, RecursiveMode, watcher, DebouncedEvent};
 use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct RealtimeContext {
     file_states: Arc<Mutex<HashMap<PathBuf, FileState>>>,
@@ -38,36 +38,40 @@ impl RealtimeContext {
         }
     }
 
-    pub fn start_watching(&mut self, workspace_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn start_watching(
+        &mut self,
+        workspace_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let (tx, rx) = channel();
         let mut watcher = watcher(tx, Duration::from_secs(1))?;
         watcher.watch(workspace_path, RecursiveMode::Recursive)?;
 
         let file_states = Arc::clone(&self.file_states);
-        
-        std::thread::spawn(move || {
-            loop {
-                match rx.recv() {
-                    Ok(event) => {
-                        if let DebouncedEvent::Write(path) = event {
-                            if let Ok(content) = std::fs::read_to_string(&path) {
-                                let language = detect_language_from_path(&path);
-                                let timestamp = SystemTime::now()
-                                    .duration_since(UNIX_EPOCH)
-                                    .unwrap()
-                                    .as_secs();
 
-                                let mut states = file_states.lock().unwrap();
-                                states.insert(path, FileState {
+        std::thread::spawn(move || loop {
+            match rx.recv() {
+                Ok(event) => {
+                    if let DebouncedEvent::Write(path) = event {
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            let language = detect_language_from_path(&path);
+                            let timestamp = SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs();
+
+                            let mut states = file_states.lock().unwrap();
+                            states.insert(
+                                path,
+                                FileState {
                                     content,
                                     last_modified: timestamp,
                                     language,
-                                });
-                            }
+                                },
+                            );
                         }
                     }
-                    Err(e) => println!("Watch error: {:?}", e),
                 }
+                Err(e) => println!("Watch error: {:?}", e),
             }
         });
 
@@ -82,11 +86,14 @@ impl RealtimeContext {
             .as_secs();
 
         let mut positions = self.cursor_positions.lock().unwrap();
-        positions.insert(PathBuf::from(file_path), CursorPosition {
-            line,
-            column,
-            timestamp,
-        });
+        positions.insert(
+            PathBuf::from(file_path),
+            CursorPosition {
+                line,
+                column,
+                timestamp,
+            },
+        );
     }
 
     pub fn get_live_context(&self, file_path: &str, context_lines: usize) -> Option<String> {
@@ -122,9 +129,7 @@ impl RealtimeContext {
         let states = self.file_states.lock().unwrap();
         states
             .iter()
-            .map(|(path, state)| {
-                (path.to_string_lossy().to_string(), state.language.clone())
-            })
+            .map(|(path, state)| (path.to_string_lossy().to_string(), state.language.clone()))
             .collect()
     }
 }

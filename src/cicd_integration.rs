@@ -57,7 +57,7 @@ impl CicdIntegrator {
 
     fn detect_pipeline_type(&self) -> String {
         let root = Path::new(&self.root_path);
-        
+
         if root.join(".github/workflows").exists() {
             "GitHub Actions".to_string()
         } else if root.join("Jenkinsfile").exists() {
@@ -79,7 +79,11 @@ impl CicdIntegrator {
         if let Ok(workflows_dir) = fs::read_dir(root.join(".github/workflows")) {
             for entry in workflows_dir {
                 if let Ok(entry) = entry {
-                    if entry.path().extension().map_or(false, |ext| ext == "yml" || ext == "yaml") {
+                    if entry
+                        .path()
+                        .extension()
+                        .map_or(false, |ext| ext == "yml" || ext == "yaml")
+                    {
                         files.push(entry.path().to_string_lossy().to_string());
                     }
                 }
@@ -99,7 +103,10 @@ impl CicdIntegrator {
         files
     }
 
-    async fn parse_pipeline_stages(&self, config_files: &[String]) -> Result<Vec<PipelineStage>, Box<dyn std::error::Error>> {
+    async fn parse_pipeline_stages(
+        &self,
+        config_files: &[String],
+    ) -> Result<Vec<PipelineStage>, Box<dyn std::error::Error>> {
         let mut stages = Vec::new();
 
         for file_path in config_files {
@@ -124,7 +131,7 @@ impl CicdIntegrator {
 
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             if trimmed.ends_with(':') && !trimmed.starts_with('-') && !trimmed.starts_with('#') {
                 if let Some(job_name) = current_job.take() {
                     stages.push(PipelineStage {
@@ -137,8 +144,12 @@ impl CicdIntegrator {
                 }
                 current_job = Some(trimmed.trim_end_matches(':').to_string());
             } else if trimmed.starts_with("- run:") || trimmed.starts_with("run:") {
-                let cmd = trimmed.strip_prefix("- run:").or_else(|| trimmed.strip_prefix("run:"))
-                    .unwrap_or(trimmed).trim().to_string();
+                let cmd = trimmed
+                    .strip_prefix("- run:")
+                    .or_else(|| trimmed.strip_prefix("run:"))
+                    .unwrap_or(trimmed)
+                    .trim()
+                    .to_string();
                 current_commands.push(cmd);
             }
         }
@@ -163,7 +174,7 @@ impl CicdIntegrator {
 
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             if trimmed.starts_with("stage(") {
                 if let Some(stage_name) = current_stage.take() {
                     stages.push(PipelineStage {
@@ -174,7 +185,7 @@ impl CicdIntegrator {
                     });
                     current_commands.clear();
                 }
-                
+
                 if let Some(start) = trimmed.find('\'') {
                     if let Some(end) = trimmed[start + 1..].find('\'') {
                         current_stage = Some(trimmed[start + 1..start + 1 + end].to_string());
@@ -205,7 +216,7 @@ impl CicdIntegrator {
 
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             if trimmed.ends_with(':') && !trimmed.starts_with('-') && !trimmed.starts_with('#') {
                 if let Some(job_name) = current_job.take() {
                     stages.push(PipelineStage {
@@ -234,7 +245,11 @@ impl CicdIntegrator {
         stages
     }
 
-    fn detect_pipeline_issues(&self, stages: &[PipelineStage], config_files: &[String]) -> Vec<CicdIssue> {
+    fn detect_pipeline_issues(
+        &self,
+        stages: &[PipelineStage],
+        config_files: &[String],
+    ) -> Vec<CicdIssue> {
         let mut issues = Vec::new();
 
         // Check for missing security scanning
@@ -249,8 +264,12 @@ impl CicdIntegrator {
                 issue_type: "Missing Security Scan".to_string(),
                 severity: "high".to_string(),
                 description: "No security scanning detected in pipeline".to_string(),
-                file: config_files.first().unwrap_or(&"pipeline".to_string()).clone(),
-                suggestion: "Add security scanning step (e.g., cargo audit, npm audit, snyk)".to_string(),
+                file: config_files
+                    .first()
+                    .unwrap_or(&"pipeline".to_string())
+                    .clone(),
+                suggestion: "Add security scanning step (e.g., cargo audit, npm audit, snyk)"
+                    .to_string(),
             });
         }
 
@@ -266,7 +285,10 @@ impl CicdIntegrator {
                 issue_type: "Missing Tests".to_string(),
                 severity: "high".to_string(),
                 description: "No test execution detected in pipeline".to_string(),
-                file: config_files.first().unwrap_or(&"pipeline".to_string()).clone(),
+                file: config_files
+                    .first()
+                    .unwrap_or(&"pipeline".to_string())
+                    .clone(),
                 suggestion: "Add test execution step".to_string(),
             });
         }
@@ -274,11 +296,15 @@ impl CicdIntegrator {
         // Check for hardcoded secrets
         for file_path in config_files {
             if let Ok(content) = fs::read_to_string(file_path) {
-                if content.contains("password") || content.contains("api_key") || content.contains("secret") {
+                if content.contains("password")
+                    || content.contains("api_key")
+                    || content.contains("secret")
+                {
                     issues.push(CicdIssue {
                         issue_type: "Potential Hardcoded Secret".to_string(),
                         severity: "critical".to_string(),
-                        description: "Potential hardcoded secrets in pipeline configuration".to_string(),
+                        description: "Potential hardcoded secrets in pipeline configuration"
+                            .to_string(),
                         file: file_path.clone(),
                         suggestion: "Use environment variables or secret management".to_string(),
                     });
@@ -289,26 +315,40 @@ impl CicdIntegrator {
         issues
     }
 
-    fn generate_recommendations(&self, issues: &[CicdIssue], stages: &[PipelineStage]) -> Vec<String> {
+    fn generate_recommendations(
+        &self,
+        issues: &[CicdIssue],
+        stages: &[PipelineStage],
+    ) -> Vec<String> {
         let mut recommendations = Vec::new();
 
-        if issues.iter().any(|i| i.issue_type == "Missing Security Scan") {
+        if issues
+            .iter()
+            .any(|i| i.issue_type == "Missing Security Scan")
+        {
             recommendations.push("Add automated security scanning to your pipeline".to_string());
         }
 
         if issues.iter().any(|i| i.issue_type == "Missing Tests") {
-            recommendations.push("Include comprehensive test execution in your CI/CD pipeline".to_string());
+            recommendations
+                .push("Include comprehensive test execution in your CI/CD pipeline".to_string());
         }
 
         if stages.len() < 3 {
-            recommendations.push("Consider adding more pipeline stages (build, test, deploy)".to_string());
+            recommendations
+                .push("Consider adding more pipeline stages (build, test, deploy)".to_string());
         }
 
-        if !stages.iter().any(|s| s.name.to_lowercase().contains("deploy")) {
+        if !stages
+            .iter()
+            .any(|s| s.name.to_lowercase().contains("deploy"))
+        {
             recommendations.push("Add deployment automation to your pipeline".to_string());
         }
 
-        recommendations.push("Use parallel execution for independent stages to improve build times".to_string());
+        recommendations.push(
+            "Use parallel execution for independent stages to improve build times".to_string(),
+        );
         recommendations.push("Implement proper artifact management and caching".to_string());
 
         recommendations
@@ -378,7 +418,8 @@ jobs:
       with:
         name: rust-binary
         path: target/release/
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_nodejs_github_action(&self) -> String {
@@ -426,7 +467,8 @@ jobs:
     - run: npm run build
     - name: Deploy
       run: echo "Add your deployment steps here"
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_python_github_action(&self) -> String {
@@ -465,7 +507,8 @@ jobs:
       run: |
         pip install safety
         safety check
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_generic_github_action(&self) -> String {
@@ -495,7 +538,8 @@ jobs:
     - name: Deploy
       if: github.ref == 'refs/heads/main'
       run: echo "Deploy to production"
-"#.to_string()
+"#
+        .to_string()
     }
 
     pub fn generate_report(&self, analysis: &CicdAnalysis) -> String {
@@ -514,20 +558,40 @@ jobs:
             if analysis.stages.is_empty() {
                 "- No stages detected".to_string()
             } else {
-                analysis.stages.iter()
-                    .map(|s| format!("- **{}** ({}): {} commands", s.name, s.stage_type, s.commands.len()))
+                analysis
+                    .stages
+                    .iter()
+                    .map(|s| {
+                        format!(
+                            "- **{}** ({}): {} commands",
+                            s.name,
+                            s.stage_type,
+                            s.commands.len()
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join("\n")
             },
             if analysis.issues.is_empty() {
                 "- No issues detected".to_string()
             } else {
-                analysis.issues.iter()
-                    .map(|i| format!("- **{}**: {} - {}", i.severity.to_uppercase(), i.description, i.suggestion))
+                analysis
+                    .issues
+                    .iter()
+                    .map(|i| {
+                        format!(
+                            "- **{}**: {} - {}",
+                            i.severity.to_uppercase(),
+                            i.description,
+                            i.suggestion
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join("\n")
             },
-            analysis.recommendations.iter()
+            analysis
+                .recommendations
+                .iter()
                 .map(|r| format!("- {}", r))
                 .collect::<Vec<_>>()
                 .join("\n")

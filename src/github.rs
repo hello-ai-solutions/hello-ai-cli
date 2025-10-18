@@ -34,7 +34,7 @@ pub struct CommitAuthor {
 pub async fn analyze_github_repo(repo_url: &str) -> Result<String, Box<dyn Error>> {
     let client = Client::new();
     let api_url = convert_to_api_url(repo_url)?;
-    
+
     // Fetch repository info
     let repo_info: GitHubRepo = client
         .get(&api_url)
@@ -43,7 +43,7 @@ pub async fn analyze_github_repo(repo_url: &str) -> Result<String, Box<dyn Error
         .await?
         .json()
         .await?;
-    
+
     // Fetch recent commits
     let commits_url = format!("{}/commits?per_page=10", api_url);
     let commits: Vec<GitHubCommit> = client
@@ -53,7 +53,7 @@ pub async fn analyze_github_repo(repo_url: &str) -> Result<String, Box<dyn Error
         .await?
         .json()
         .await?;
-    
+
     Ok(format_analysis(&repo_info, &commits))
 }
 
@@ -70,12 +70,17 @@ fn convert_to_api_url(repo_url: &str) -> Result<String, Box<dyn Error>> {
 }
 
 fn format_analysis(repo: &GitHubRepo, commits: &[GitHubCommit]) -> String {
-    let commits_summary = commits.iter()
+    let commits_summary = commits
+        .iter()
         .take(5)
-        .map(|c| format!("- {} by {} ({})", 
-            c.commit.message.lines().next().unwrap_or(""),
-            c.commit.author.name,
-            c.commit.author.date))
+        .map(|c| {
+            format!(
+                "- {} by {} ({})",
+                c.commit.message.lines().next().unwrap_or(""),
+                c.commit.author.name,
+                c.commit.author.date
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -113,7 +118,9 @@ This repository demonstrates active development and community engagement in the 
 "#,
         repo.full_name,
         repo.name,
-        repo.description.as_deref().unwrap_or("No description available"),
+        repo.description
+            .as_deref()
+            .unwrap_or("No description available"),
         repo.language.as_deref().unwrap_or("Unknown"),
         repo.stargazers_count,
         repo.forks_count,

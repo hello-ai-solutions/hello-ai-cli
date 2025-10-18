@@ -1,0 +1,106 @@
+[model]
+provider = "local"
+use_local_llm = true
+local_llm_endpoint = "http://localhost:11434/api/generate"
+local_llm_model = "qwen2.5-coder:14b"
+guard_model = "deepseek-coder:6.7b"
+
+[logging]
+# Logging configuration
+enabled = true
+provider = "local"  # "local", "aws", "azure", "gcp", "oracle"
+level = "info"  # "debug", "info", "warn", "error"
+
+# Local logging
+local_path = "./logs"
+local_filename = "hello-ai.log"
+max_file_size_mb = 100
+max_files = 10
+
+# AWS S3 logging
+aws_s3_bucket = ""
+aws_s3_prefix = "hello-ai-logs/"
+aws_s3_region = "ap-southeast-2"
+
+# Azure Blob logging
+azure_storage_account = ""
+azure_container = "hello-ai-logs"
+azure_storage_key = ""  # Set via AZURE_STORAGE_KEY env var
+
+# GCP Cloud Storage logging
+gcp_storage_bucket = ""
+gcp_storage_prefix = "hello-ai-logs/"
+
+# Oracle Object Storage logging
+oracle_bucket = ""
+oracle_namespace = ""
+oracle_prefix = "hello-ai-logs/"
+
+[cloud]
+# Unified cloud provider configuration
+provider = "aws"  # "aws", "azure", "gcp", "oracle"
+
+# AWS Configuration
+aws_profile = "bedrock"
+aws_region = "ap-southeast-2"
+aws_llm_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+# Azure Configuration  
+azure_subscription_id = ""
+azure_resource_group = ""
+azure_region = "australiaeast"
+azure_openai_endpoint = ""  # e.g., https://your-resource.openai.azure.com/
+azure_openai_key = ""  # Set via AZURE_OPENAI_KEY env var
+azure_openai_model = "gpt-4"
+azure_text_analytics_endpoint = ""
+azure_text_analytics_key = ""  # Set via AZURE_TEXT_ANALYTICS_KEY env var
+
+# GCP Configuration
+gcp_project_id = ""  # Set via GCP_PROJECT_ID env var
+gcp_region = "australia-southeast1"
+gcp_credentials_path = ""  # Or set GOOGLE_APPLICATION_CREDENTIALS
+gcp_vertex_model = "gemini-pro"
+
+# Oracle Cloud Configuration
+oracle_compartment_id = ""
+oracle_region = "ap-sydney-1"
+oracle_config_file = "~/.oci/config"  # OCI config file path
+oracle_profile = "DEFAULT"
+oracle_llm_model = "cohere.command-r-plus"
+
+[security]
+# Security module configuration
+pii_scanner = true
+pii_model = "deepseek-coder:6.7b"
+nightfall_scanner = false
+security_scanner = true
+permission_checker = true
+
+[analysis]
+# Analysis features
+command_analysis = true
+ai_analysis = true
+
+[features]
+# General features
+streaming = true
+visual_indicators = true
+execution_mode = "interactive"  # "interactive", "chatbot", "auto"
+
+[model]
+# Local LLM fallback configuration
+use_local_llm = false  # Fallback to local when cloud provider unavailable
+local_llm_endpoint = "http://localhost:11434/api/generate"
+local_llm_model = "deepseek-coder:6.7b"
+
+# Standalone provider configuration (deprecated - use [cloud] section)
+provider = "bedrock"  # Use for backward compatibility
+openai_api_key = ""
+openai_model = "gpt-4"
+openai_endpoint = "https://api.openai.com/v1/chat/completions"
+gemini_api_key = ""
+gemini_model = "gemini-pro"
+gemini_endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
+default_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+

@@ -1,0 +1,34 @@
+[package]
+name = "hello-ai-cli"
+version = "1.0.0"
+edition = "2021"
+description = "Hello AI CLI - A configurable AI assistant with multi-cloud LLM support"
+authors = ["Hans"]
+license = "MIT"
+repository = "https://github.com/hans/hello-ai-cli"
+
+[workspace]
+
+[dependencies]
+aws-config = "1.0.3"
+aws-sdk-bedrockruntime = "1.51.0"
+aws-sdk-comprehend = "1.51.0"
+aws-sdk-ses = "1.51.0"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+toml = "0.8"
+reqwest = { version = "0.11", features = ["json"] }
+regex = "1.0"
+colored = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4"] }
+tokio = { version = "1.0", features = ["full"] }
+signal-hook = "0.3"
+notify = "4.0"
+clap = { version = "4.0", features = ["derive"] }
+async-trait = "0.1"
+rustyline = "14.0"
+dirs = "5.0"
+urlencoding = "2.1"
+warp = "0.3"

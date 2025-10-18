@@ -1,0 +1,52 @@
+[security]
+# Security module configuration - Azure PII Example
+pii_scanner = true
+pii_provider = "azure"  # "aws", "azure", "gcp", "local"
+pii_use_local_llm = false
+nightfall_scanner = true
+security_scanner = true
+permission_checker = true
+
+# Azure PII Detection (Text Analytics/Purview)
+azure_text_analytics_key = ""  # Set via AZURE_TEXT_ANALYTICS_KEY env var
+azure_text_analytics_endpoint = "https://your-resource.cognitiveservices.azure.com/"
+
+# GCP DLP API
+gcp_project_id = ""  # Set via GCP_PROJECT_ID env var
+gcp_credentials_path = ""  # Path to service account JSON file
+
+[analysis]
+# Analysis features
+command_analysis = true
+ai_analysis = true
+
+[features]
+# General features
+streaming = true
+visual_indicators = true
+execution_mode = "interactive"  # "interactive", "chatbot", "auto"
+
+[model]
+# LLM model configuration
+provider = "bedrock"  # "bedrock", "openai", "gemini", "local"
+use_local_llm = false
+local_llm_endpoint = "http://localhost:11434/api/generate"
+local_llm_model = "deepseek-coder:6.7b"
+default_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+# OpenAI configuration
+openai_api_key = ""  # Set via OPENAI_API_KEY env var or here
+openai_model = "gpt-4"  # gpt-4, gpt-3.5-turbo, etc.
+openai_endpoint = "https://api.openai.com/v1/chat/completions"
+
+# Gemini configuration  
+gemini_api_key = ""  # Set via GEMINI_API_KEY env var or here
+gemini_model = "gemini-pro"  # gemini-pro, gemini-pro-vision
+gemini_endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
+
+[aws]
+# AWS configuration
+profile = "bedrock"  # AWS profile to use from ~/.aws/credentials
+region = "ap-southeast-2"
+region_display = "ap-southeast-2 (Sydney)"
+data_residency = "100% Australia"

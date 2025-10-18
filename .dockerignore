@@ -1,0 +1,14 @@
+target
+node_modules
+.git
+.amazonq
+**/*.log
+.DS_Store
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+.env
+.venv
+dist
+build

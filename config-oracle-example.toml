@@ -1,0 +1,60 @@
+[cloud]
+# Oracle Cloud Infrastructure Provider Configuration
+provider = "oracle"
+
+# AWS Configuration (unused when provider = "oracle")
+aws_profile = "bedrock"
+aws_region = "ap-southeast-2"
+aws_llm_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+# Azure Configuration (unused when provider = "oracle")
+azure_subscription_id = ""
+azure_resource_group = ""
+azure_region = "australiaeast"
+azure_openai_endpoint = ""
+azure_openai_key = ""
+azure_openai_model = "gpt-4"
+azure_text_analytics_endpoint = ""
+azure_text_analytics_key = ""
+
+# GCP Configuration (unused when provider = "oracle")
+gcp_project_id = ""
+gcp_region = "australia-southeast1"
+gcp_credentials_path = ""
+gcp_vertex_model = "gemini-pro"
+
+# Oracle Configuration
+oracle_compartment_id = "ocid1.compartment.oc1..your-compartment-id"
+oracle_region = "ap-sydney-1"
+oracle_config_file = "~/.oci/config"  # OCI config file path
+oracle_profile = "DEFAULT"
+oracle_llm_model = "cohere.command-r-plus"
+
+[security]
+pii_scanner = true
+nightfall_scanner = true
+security_scanner = true
+permission_checker = true
+
+[analysis]
+command_analysis = true
+ai_analysis = true
+
+[features]
+streaming = true
+visual_indicators = true
+execution_mode = "interactive"
+
+[model]
+# Local LLM fallback
+use_local_llm = false
+local_llm_endpoint = "http://localhost:11434/api/generate"
+local_llm_model = "deepseek-coder:6.7b"
+provider = "bedrock"
+openai_api_key = ""
+openai_model = "gpt-4"
+openai_endpoint = "https://api.openai.com/v1/chat/completions"
+gemini_api_key = ""
+gemini_model = "gemini-pro"
+gemini_endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
+default_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
